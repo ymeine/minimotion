@@ -3,6 +3,7 @@ import sample2 from "./sample2";
 import sample3 from "./sample3";
 import sample4 from "./sample4";
 import sample5 from "./sample5";
+import applyFunction from "./applyFunction";
 import { DEMOS as animejsDemos } from "./animejs";
 
 export const DEMOS = [
@@ -25,6 +26,10 @@ export const DEMOS = [
   {
     title: "Sample 5",
     sample: sample5
+  },
+  {
+    title: "Apply function",
+    sample: applyFunction
   },
   ...animejsDemos
 ];
