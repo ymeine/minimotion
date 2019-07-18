@@ -3,4 +3,7 @@
 	"include": [
 		"./*.ts"
 	],
+	"compilerOptions": {
+		"outDir": "../../dist/samples"
+	}
 }

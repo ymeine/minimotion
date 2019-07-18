@@ -2,6 +2,11 @@
     "name": "minimotion",
     "version": "0.0.0-SNAPSHOT",
     "description": "Composable JavaScript animations with async timelines",
+    "author": "Bertrand Laporte",
+    "license": "Apache-2.0",
+    "repository": {
+        "type": "git"
+    },
     "keywords": [
         "animation",
         "javascript",
@@ -12,42 +17,42 @@
         "canvas",
         "timeline"
     ],
-    "repository": {
-        "type": "git"
+
+    "engines": {
+        "node": ">=10.3.5"
     },
-    "author": "Bertrand Laporte",
     "main": "dist/lib/index.js",
+
     "scripts": {
-        "clean": "rm -rf dist/",
-        "build-test": "rollup -c rollup.test.config.js",
-        "build": "tsc",
-        "build-samples": "cpx 'src/samples/*.{html,js,css,svg,png,json}' dist && rollup -c rollup.samples.config.js",
-        "mocha": "mocha dist/test.js --reporter dot",
-        "test": "yarn run build-test && yarn run mocha"
+        "clean": "rimraf dist",
+
+        "lib:build": "tsc -p src/lib/tsconfig.json",
+        "lib:build:watch": "yarn lib:build -- -w",
+        
+        "samples:build:statics": "cpx \"src/samples/*.{html,js,css,svg,png,json}\" dist/samples",
+        "samples:build:src": "rollup -c src/samples/rollup.config.js",
+        "samples:build": "yarn samples:build:statics && yarn samples:build:src",
+        "samples:serve": "yarn samples:build && http-server dist/samples",
+        "samples": "yarn samples:serve",
+        
+        "test:build": "rollup -c src/test/rollup.config.js",
+        "test:suite": "mocha dist/test/index.js --reporter dot",
+        "test": "yarn test:build && yarn run test:suite",
+
+        "build": "yarn lib:build"
     },
-    "license": "Apache-2.0",
-    "bugs": {},
     "devDependencies": {
         "@types/node": "^10.3.5",
         "@types/mocha": "^5.2.3",
         "rollup": "^0.61.2",
-        "rollup-watch": "^4.3.1",
         "rollup-plugin-typescript2": "^0.15.0",
-        "rollup-plugin-node-resolve": "^3.3.0",
-        "rollup-plugin-node-builtins": "^2.1.2",
-        "rollup-plugin-uglify": "^4.0.0",
         "rollup-plugin-minify-es": "^1.1.1",
         "rollup-plugin-gzip": "^1.3.0",
         "uglify-es": "^3.3.9",
         "typescript": ">=2.9.2",
         "mocha": "^5.2.0",
-        "cpx": "1.5.0",
+        "cpx": "^1.5.0",
+        "rimraf": "^2.6.3",
         "http-server": "^0.11.1"
-    },
-    "dependencies": {
-        "typescript": ">=2.9.2"
-    },
-    "engines": {
-        "node": ">=10.3.5"
     }
 }

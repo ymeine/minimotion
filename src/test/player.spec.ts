@@ -1,6 +1,6 @@
 import * as assert from 'assert';
-import { Anim } from '../core/types';
-import { linear } from '../core/easings';
+import { Anim } from '../lib/types';
+import { linear } from '../lib/easings';
 import { TestPlayer, animCtxtXYZ, logs, reset, TestPlayer2, incrementTick } from './fixtures';
 
 describe("Player", () => {

@@ -1,6 +1,6 @@
-import { TimeLine, Player } from './../core/anim';
-import { StyleElement, SelectorContext, Anim } from "../core/types";
-import { dom } from '../core/utils';
+import { TimeLine, Player } from '../lib/anim';
+import { StyleElement, SelectorContext, Anim } from "../lib/types";
+import { dom } from '../lib/utils';
 
 let CURRENT_TICK = 0;
 const MAX_ITERATION = 100, MAX_ASYNC = 100;
