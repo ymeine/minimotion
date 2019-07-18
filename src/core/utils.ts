@@ -24,7 +24,7 @@ export function parseValue(name, params, defaults) {
 // --------------------------------------------------------------------------------------------------------------------
 // utilities from http://animejs.com
 
-const TRANSFORMS = { translateX: 1, translateY: 1, translateZ: 1, rotate: 1, rotateX: 1, rotateY: 1, rotateZ: 1, scale: 1, scaleX: 1, scaleY: 1, scaleZ: 1, skewX: 1, skewY: 1, perspective: 1 };
+const TRANSFORMS = new Set(['translateX', 'translateY', 'translateZ', 'rotate', 'rotateX', 'rotateY', 'rotateZ', 'scale', 'scaleX', 'scaleY', 'scaleZ', 'skewX', 'skewY', 'perspective']);
 const RX_CSS_NAME = /([a-z])([A-Z])/g;
 
 /**
@@ -46,12 +46,15 @@ function isSVG(el) {
  */
 export function getAnimationType(el: any, propName: string): TweenType {
     if (el.nodeType || isSVG(el)) {
-        if (TRANSFORMS.hasOwnProperty(propName)) return 'transform';
+        if (TRANSFORMS.has(propName)) return 'transform';
         if ((el.getAttribute(propName) || (isSVG(el) && el[propName]))) return 'attribute';
         if (propName !== 'transform') return 'css';
     }
     return 'invalid';
 }
+
+const TRANSFORM_FUNCTION_PARAMS = () => /\s*(\-)?\d+\s*(px|deg)?\s*(?:\,\s*)?/g;
+const TRANSFORM_REGEXP = () => /\s*(\w+)\s*\([^\)]\)/g;
 
 export let dom = {
     /**
@@ -76,12 +79,38 @@ export let dom = {
                 targetElt.style[propName] = value;
                 break;
             case 'transform':
-                // transform: translateX(10px) rotate(10deg) translateY(5px);
-                console.log("Todo: transforms");
+                // TODO 2019-07-11T12:54:47+02:00
+                // don't drop the other values
+                // if "none", it's ok
+                // for the rest, target properly
+                // could be a regexp
+                // console.log(dom.getTransforms(targetElt));
+                targetElt.style.transform = `${propName}(${value}px)`;
                 break;
             default:
                 console.log("[animate] unsupported animation type: " + propType);
         }
+    },
+
+    getTransforms(element) {
+        const transforms: {name:string, value:string, unit:string}[] = [];
+        const propertyValue = element.style.transform;
+        
+        if (propertyValue == null || propertyValue === '' || propertyValue === 'none') {
+            return transforms;
+        }
+
+        const regexp = TRANSFORM_REGEXP();
+        while (true) {
+            const result = regexp.exec(propertyValue);
+            if (result == null) {
+                break;
+            }
+            const [_, name, value, unit] = result;
+            transforms.push({name, value, unit});
+        }
+
+        return transforms;
     },
 
     /**
