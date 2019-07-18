@@ -1,4 +1,4 @@
-import { TweenType } from './types';
+import { TweenType, ResolvedTarget, isTargetFunction } from './types';
 import { getTransformValue, setTransformValue, TRANSFORMS } from './transforms';
 
 let LOG_ACTIVE = false;
@@ -41,13 +41,17 @@ function isSVG(el) {
 
 /**
  * Identify the type of animation (transform vs attribute vs css style)
- * @param el 
+ * @param target 
  * @param propName 
  */
-export function getAnimationType(el: any, propName: string): TweenType {
-    if (el.nodeType || isSVG(el)) {
+export function getAnimationType(target: ResolvedTarget, propName: string): TweenType {
+    if (isTargetFunction(target)) {
+        return 'function';
+    }
+
+    if (target.nodeType || isSVG(target)) {
         if (TRANSFORMS.hasOwnProperty(propName)) return 'transform';
-        if ((el.getAttribute(propName) || (isSVG(el) && el[propName]))) return 'attribute';
+        if ((target.getAttribute(propName) || (isSVG(target) && target[propName]))) return 'attribute';
         if (propName !== 'transform') return 'css';
     }
     return 'invalid';

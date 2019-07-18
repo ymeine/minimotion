@@ -1,5 +1,21 @@
-import { ControlParams, AnimEntity, AnimContainer, StyleElement, PlayParams, TweenType, RelativeOperator } from "./types";
-import { parseValue, log, getAnimationType, dom, parseColor } from './utils';
+import {
+    ControlParams,
+    AnimEntity,
+    AnimContainer,
+    PlayParams,
+    TweenType,
+    RelativeOperator,
+    ResolvedTarget,
+    isTargetFunction,
+} from "./types";
+
+import {
+    parseValue,
+    log,
+    getAnimationType,
+    dom,
+    parseColor,
+} from './utils';
 import { getTransformUnit } from './transforms';
 
 const RX_NUMERIC_PROP = /^(\*=|\+=|-=)?([\+\-]?[0-9#\.]+)(%|px|pt|em|rem|in|cm|mm|ex|ch|pc|vw|vh|vmin|vmax|deg|rad|turn)?$/,
@@ -124,12 +140,22 @@ abstract class TimelineEntity implements AnimEntity {
     }
 }
 
-export function createTweens(targetElt: StyleElement | null, params, settings, parent, duration: number, easing: Function, elasticity: number, delay: number, release: number) {
+export function createTweens(
+    target: ResolvedTarget,
+    params,
+    settings,
+    parent,
+    duration: number,
+    easing: Function,
+    elasticity: number,
+    delay: number,
+    release: number
+) {
     let tween: Tween | null = null;
     for (let p in params) {
         if (settings[p] === undefined && p !== 'target') {
             // TODO share init results across all tweens of a same family
-            let twn = new Tween(targetElt, p, params[p], duration, easing, elasticity, delay, release);
+            let twn = new Tween(target, p, params[p], duration, easing, elasticity, delay, release);
             if (twn.isValid) {
                 tween = twn;
                 tween.attach(parent);
@@ -149,7 +175,16 @@ export class Tween extends TimelineEntity {
     type: TweenType;
     roundLevel = 10;
 
-    constructor(public targetElt: StyleElement | null, public propName: string, propValue, public duration: number, public easing, public elasticity: number, delay: number, release: number) {
+    constructor(
+        public target: ResolvedTarget,
+        public propName: string,
+        propValue,
+        public duration: number,
+        public easing,
+        public elasticity: number,
+        delay: number,
+        release: number
+    ) {
         // todo normalize from / to, support colors, etc.
         super("tween#" + ++AE_COUNT);
         this.delay = delay;
@@ -167,7 +202,7 @@ export class Tween extends TimelineEntity {
         // - get to value & unit, determine if relative (i.e. starts with "+" or "-")
         // - get from value (unit should be the same as to)
         // - identify value type (dimension, color, unit-less)
-        let target = this.targetElt,
+        let target = this.target,
             propName = this.propName,
             type = this.type = getAnimationType(target, propName);
         if (type === 'invalid') return 100;
@@ -193,10 +228,14 @@ export class Tween extends TimelineEntity {
 
             let propFromIsDom = false;
             if (!propFrom) {
-                // read from dom
-                propFromIsDom = true;
-                propFrom = dom.getValue(target, propName, type);
-                if (propFrom === null) return 103;
+                if (isTargetFunction(target)) {
+                    propFrom = 0;
+                } else {
+                    // read from dom
+                    propFromIsDom = true;
+                    propFrom = dom.getValue(target, propName, type);
+                    if (propFrom === null) return 103;
+                }
             }
             // check consistency
             let split2 = RX_NUMERIC_PROP.exec(propFrom);
@@ -223,16 +262,24 @@ export class Tween extends TimelineEntity {
             }
         } else {
             // not numeric - may be a color?
-            let c = parseColor(propTo);
-            if (!c) return 300; // invalid value
-            this.propTo = c;
+            let color = parseColor(propTo);
+            if (!color) return 300; // invalid value
+            this.propTo = color;
             if (!propFrom) {
-                c = parseColor(dom.getValue(target, propName, type)) || [0, 0, 0, 1];
+                const defaultColor = [0, 0, 0, 1];
+                if (isTargetFunction(target)) {
+                    color = defaultColor;
+                } else {
+                    color = parseColor(dom.getValue(target, propName, type));
+                    if (color == null) {
+                        color = defaultColor;
+                    }
+                }
             } else {
-                c = parseColor(propFrom);
-                if (!c) return 301; // invalid from color value
+                color = parseColor(propFrom);
+                if (!color) return 301; // invalid from color value
             }
-            this.propFrom = c;
+            this.propFrom = color;
         }
 
         if (!this.unit) {
@@ -261,8 +308,8 @@ export class Tween extends TimelineEntity {
     }
 
     setProgression(elapsed: number) {
-        let tg = this.targetElt;
-        if (!tg) return;
+        let target = this.target;
+        if (!target) return;
         let d = this.duration,
             progression = d === 0 ? 1 : elapsed / d,
             easing = this.easing(progression, this.elasticity),
@@ -279,7 +326,11 @@ export class Tween extends TimelineEntity {
             }
             value = "rgba(" + rgba.join(", ") + ")";
         }
-        dom.setValue(tg, this.propName, this.type, value);
+        if (isTargetFunction(target)) {
+            target({property: this.propName, value})
+        } else {
+            dom.setValue(target, this.propName, this.type, value);
+        }
     }
 }
 
