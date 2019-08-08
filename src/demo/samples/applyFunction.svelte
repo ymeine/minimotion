@@ -3,35 +3,53 @@
   import { easeInOutCubic } from "../../core/easings";
 
   async function animation(a) {
-	const animated = document.querySelector('.square');
-
 	const model = {
-		translate1: 0,
-		rotate: 0,
-		translate2: 0,
+		translate1: '0',
+		rotation: '0',
+		translate2: '0',
+		color: null,
+		alphabetIndex: 1,
 	};
 
 	a.animate({
-		target: ({property, value}) => {
+		target: '.square',
+		
+		getValue: ({property, target}) => {
+			if (property === 'color') {
+				return window.getComputedStyle(target)['background-color'];
+			}
+			return model[property];
+		},
+		setValue: ({target, property, value}) => {
 			model[property] = value;
-			const {translate1, rotate, translate2} = model;
 
-			animated.style.transform = [
+			const {translate1, rotation, translate2, color} = model;
+			target.style['background-color'] = color;
+			target.style.transform = [
 				`translateX(${translate1}px)`,
-				`rotate(${rotate}deg)`,
+				`rotate(${rotation}deg)`,
 				`translateX(${translate2}px)`,
 			].join(' ');
+			alphabetIndex = model.alphabetIndex;
+
+			target.firstElementChild.style.transform = `rotate(-${rotation}deg)`;
 		},
 
 		delay: 200,
 		duration: 1000,
 		easing: easeInOutCubic,
 
-		translate1: [0, 475],
-		rotate: [0, 90],
-		translate2: [0, 160],
+		translate1: 475,
+		rotation: 90,
+		translate2: 160,
+		color: '#3e4fff',
+		alphabetIndex: 26,
 	});
   }
+
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  let alphabetIndex = 1;
+  $: content = alphabet[Math.round(alphabetIndex) - 1];
 </script>
 
 <style>
@@ -42,16 +60,18 @@
 
   div.square {
     position: absolute;
-    display: inline-block;
     height: 30px;
     width: 30px;
     top: 0px;
     left: 0px;
     background-color: #fe8820;
+	display: grid;
+	align-items: center;
+	justify-items: center;
   }
 </style>
 
 <div class="main">
-  <div class="square" />
+  <div class="square"><span>{content}</span></div>
 </div>
 <Player {animation} />

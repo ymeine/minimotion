@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { Anim } from './../core/types';
-import { reset, TestPlayer, logs, animCtxtXYZ, lastTick } from "./fixtures";
+import { reset, TestPlayer, logs, animCtxtXYZ, lastTick, TestElement } from "./fixtures";
 import { linear, easeOutElastic } from '../core/easings';
 
 describe("animate", () => {
@@ -311,6 +311,130 @@ describe("animate", () => {
            "1: #x.top = -0.000334%;",
            "2: #x.top = 0.000333%;",
            "3: #x.top = 0.001%;",
+        ], "logs");
+    });
+    
+    it("should support custom setValue", async function () {
+        const player = new TestPlayer([], animate);
+
+        const actualProperties = {
+            length: [],
+            color: [],
+        };
+
+        function animate(a) {
+            a.animate({
+                setValue: ({property, value}) => actualProperties[property].push(value),
+                duration: 32,
+                easing: linear,
+
+                length: [0, 100],
+                color: ['#000000', '#FFFFFF'],
+            });
+        }
+
+        await player.play();
+        assert.deepEqual(actualProperties, {
+            length: ['0', '50', '100'],
+            color: [
+                'rgba(0, 0, 0, 1)',
+                'rgba(128, 128, 128, 1)',
+                'rgba(255, 255, 255, 1)',
+            ],
+        });
+    });
+
+    it("should support custom setValue with no from but custom getValue", async function () {
+        const player = new TestPlayer([], animate);
+
+        const actualProperties = {
+            length: [],
+            color: [],
+        };
+
+        const initialValues = {
+            length: 0,
+            color: '#000000',
+        }
+
+        function animate(a) {
+            a.animate({
+                getValue: ({property}) => initialValues[property],
+                setValue: ({property, value}) => actualProperties[property].push(value),
+                duration: 32,
+                easing: linear,
+
+                length: 100,
+                color: '#FFFFFF',
+            });
+        }
+
+        await player.play();
+        assert.deepEqual(actualProperties, {
+            length: ['0', '50', '100'],
+            color: [
+                'rgba(0, 0, 0, 1)',
+                'rgba(128, 128, 128, 1)',
+                'rgba(255, 255, 255, 1)',
+            ],
+        });
+    });
+
+    it("should receive target with custom getValue / setValue", async function () {
+        const target = new TestElement('x');
+        const player = new TestPlayer([target], animate);
+
+        function animate(a) {
+            a.animate({
+                target: '#x',
+                getValue: ({target}) => (assert.strictEqual(target, target), 0),
+                setValue: ({target}) => assert.strictEqual(target, target),
+                duration: 32,
+                dummy: 100,
+            });
+        }
+
+        await player.play();
+    });
+
+    it("should support custom getValue with default setValue and a target", async function () {
+        const player = new TestPlayer([new TestElement('x')], animate);
+
+        const initialValues = {
+            offset: 0,
+            color: '#000000',
+        }
+
+        const remapping = {
+            top: 'offset',
+            left: 'offset',
+        };
+
+        function animate(a) {
+            a.animate({
+                target: '#x',
+                getValue: ({property}) => initialValues[remapping[property] || property],
+                duration: 32,
+                easing: linear,
+
+                top: 100,
+                left: 100,
+                color: '#FFFFFF',
+            });
+        }
+        await player.play();
+        assert.deepEqual(logs(), [
+            "0: #x.top = 0px;",
+            "0: #x.left = 0px;",
+            "0: #x.color = rgba(0, 0, 0, 1);",
+
+            "1: #x.top = 50px;",
+            "1: #x.left = 50px;",
+            "1: #x.color = rgba(128, 128, 128, 1);",
+
+            "2: #x.top = 100px;",
+            "2: #x.left = 100px;",
+            "2: #x.color = rgba(255, 255, 255, 1);",
         ], "logs");
     });
 

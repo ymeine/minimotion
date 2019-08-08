@@ -1,5 +1,5 @@
-import { ControlParams, AnimEntity, AnimContainer, PlayParams, TweenType, ResolvedTarget, isTargetFunction } from "./types";
-import { parseValue, log, getAnimationType, dom } from './utils';
+import { ControlParams, AnimEntity, AnimContainer, PlayParams, TweenType, ResolvedTarget, GetValue, SetValue } from "./types";
+import { parseValue, log, getAnimationType } from './utils';
 import { ValueInterpolator } from './interpolators/types';
 import { createInterpolator } from './interpolators';
 
@@ -120,6 +120,8 @@ abstract class TimelineEntity implements AnimEntity {
 
 export function createTweens(
     target: ResolvedTarget,
+    getValue: GetValue,
+    setValue: SetValue,
     params,
     settings,
     parent,
@@ -133,7 +135,7 @@ export function createTweens(
     for (const p in params) {
         if (settings[p] === undefined && p !== 'target') {
             // TODO share init results across all tweens of a same family
-            const twn = new Tween(target, p, params[p], duration, easing, elasticity, delay, release);
+            const twn = new Tween(target, getValue, setValue, p, params[p], duration, easing, elasticity, delay, release);
             if (twn.isValid) {
                 tween = twn;
                 tween.attach(parent);
@@ -150,6 +152,8 @@ export class Tween extends TimelineEntity {
 
     constructor(
         public target: ResolvedTarget,
+        public getValue: GetValue,
+        public setValue: SetValue,
         public propName: string,
         propValue,
         public duration: number,
@@ -178,7 +182,6 @@ export class Tween extends TimelineEntity {
         const target = this.target,
             propName = this.propName,
             type = this.type = getAnimationType(target, propName);
-        if (type === 'invalid') return 100;
 
         let fromIsDom = false;
         let propFrom: any, propTo: any;
@@ -188,11 +191,11 @@ export class Tween extends TimelineEntity {
             propTo = '' + propValue[1];
         } else {
             fromIsDom = true;
-            if (isTargetFunction(target)) {
-                propFrom = '';
-            } else {
-                propFrom = '' + dom.getValue(target, propName, type);
-            }
+            propFrom = '' + this.getValue.call(undefined, {
+                target,
+                property: propName,
+                type,
+            });
             propTo = '' + propValue;
         }
 
@@ -225,16 +228,17 @@ export class Tween extends TimelineEntity {
 
     setProgression(elapsed: number) {
         const target = this.target;
-        if (!target || !this.isValid) return;
+        if (!this.isValid) return;
         const d = this.duration,
             progression = d === 0 ? 1 : elapsed / d,
             easing = this.easing(progression, this.elasticity),
             value = this.interpolator!.getValue(easing);
-        if (isTargetFunction(target)) {
-            target({ property: this.propName, value })
-        } else {
-            dom.setValue(target, this.propName, this.type, value);
-        }
+        this.setValue.call(undefined, {
+            target,
+            property: this.propName,
+            type: this.type,
+            value,
+        });
     }
 }
 

@@ -1,24 +1,25 @@
 export type Selector = HTMLElement | string;
 
-export interface TargetFunctionArg {
-    property: string;
-    value: string;
-}
-export type TargetFunction = (arg: TargetFunctionArg) => void;
+export type Target = HTMLElement | null;
 
-export function isTargetFunction(value: any): value is TargetFunction {
-    return typeof value === 'function';
-}
-
-export type Target = Selector | TargetFunction;
-
-export type ResolvedTarget = HTMLElement | TargetFunction;
+export type ResolvedTarget = Target;
 
 export interface SelectorContext {
     querySelector(selector: string): HTMLElement | null;
     querySelectorAll(selector: string): NodeListOf<HTMLElement> | HTMLElement[];
 }
 
+export interface ValueAccessorCommonArgs {
+    target: Target;
+    property: string;
+    type: TweenType;
+}
+
+export interface SetValueArg extends ValueAccessorCommonArgs {
+    value: string;
+}
+export type GetValue = (arg: ValueAccessorCommonArgs) => 'string';
+export type SetValue = (arg: SetValueArg) => void;
 
 type StyleNumber = number | string | (number | string)[];
 
@@ -27,7 +28,9 @@ export interface Instructions {
 }
 
 export interface ControlParams {
-    target?: Target;
+    target?: Selector;
+    getValue?: GetValue;
+    setValue?: SetValue;
     easing?: (elapsed: number, elasticity: number) => number;    // e.g. easeInOutQuad
     duration?: number;              // e.g. 1000
     delay?: number;                 // e.g. 1000 -> delay before execution
@@ -54,7 +57,7 @@ interface StyleParams {
     [stylePropName: string]: any;
 }
 
-export type TweenType = 'transform' | 'attribute' | 'css' | 'function' | 'invalid';
+export type TweenType = 'transform' | 'attribute' | 'css' | 'custom';
 export type RelativeOperator = '+=' | '-=' | '*=' | '';
 
 export interface AnimateParams extends ControlParams, StyleParams {
