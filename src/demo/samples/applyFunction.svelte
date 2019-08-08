@@ -3,8 +3,6 @@
   import { easeInOutCubic } from "../../core/easings";
 
   async function animation(a) {
-	const animated = document.querySelector('.square');
-
 	const model = {
 		translate1: 0,
 		rotate: 0,
@@ -12,13 +10,15 @@
 	};
 
 	a.animate({
-		target: ({property, value}) => {
+		target: '.square',
+		setValue: (target, property, type, value) => {
+			console.log('called');
 			model[property] = value;
-			const {translate1, rotate, translate2} = model;
+			const {translate1, rotation, translate2} = model;
 
-			animated.style.transform = [
+			target.style.transform = [
 				`translateX(${translate1}px)`,
-				`rotate(${rotate}deg)`,
+				`rotate(${rotation}deg)`,
 				`translateX(${translate2}px)`,
 			].join(' ');
 		},
@@ -28,7 +28,7 @@
 		easing: easeInOutCubic,
 
 		translate1: [0, 475],
-		rotate: [0, 90],
+		rotation: [0, 90],
 		translate2: [0, 160],
 	});
   }

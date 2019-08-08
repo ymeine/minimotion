@@ -14,11 +14,9 @@ import {
     PlayArguments,
     PlayParams,
     Target,
-    ResolvedTarget,
-    isTargetFunction,
 } from './types';
 import { easeOutElastic } from './easings';
-import { log, parseValue } from './utils';
+import { log, parseValue, dom } from './utils';
 import { Delay, PlayerEntity, createTweens } from './entities';
 
 const FRAME_MS = 16, MAX_TIME = Number.MAX_SAFE_INTEGER, MAX_ASYNC = 100, MAX_TL_DURATION_MS = 600000; // 10mn
@@ -38,7 +36,9 @@ const defaultSettings: ControlParams = {
     delay: 0,
     release: 0,
     elasticity: .5,
-    speed: 1
+    speed: 1,
+    getValue: dom.getValue,
+    setValue: dom.setValue,
 }
 
 export async function exhaustAsyncPipe() {
@@ -518,7 +518,7 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
     }
 
     // this method can be overridden for specific contexts
-    select(selector: Selector, scope?: SelectorContext): HTMLElement | null {
+    select(selector: Selector, scope?: SelectorContext): Target {
         if (!selector) return null;
         if (typeof selector === "string") {
             scope = scope || this.selectorCtxt;
@@ -570,7 +570,9 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
     async animate(params: AnimateParams): Promise<any> {
         // read all control args
         const d = this.settings,
-            target = parseValue("target", params, d) as Target,
+            target = parseValue("target", params, d) as Selector,
+            getValue = parseValue("getValue", params, d) as Function,
+            setValue = parseValue("setValue", params, d) as Function,
             easing = parseValue("easing", params, d) as Function,
             speed = parseValue("speed", params, d) as number,
             duration = convertDuration(parseValue("duration", params, d), speed), // convertDuration
@@ -578,20 +580,13 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
             release = convertDuration(parseValue("release", params, d), speed),
             elasticity = parseValue("elasticity", params, d) as number;
 
-        // identify target
-        let finalTarget: ResolvedTarget;
-        if (isTargetFunction(target)) {
-            finalTarget = target;
-        } else {
-            const targetElement = this.select(target);
-            if (targetElement == null) {
-                return console.log('[anim] invalid target selector: ' + target);
-            }
-            finalTarget = targetElement;
+        const finalTarget = this.select(target);
+        if (finalTarget == null) {
+            return console.log('[anim] invalid target selector: ' + target);
         }
     
         // identify properties/attributes to animate and create a tween for each of them
-        const tween = createTweens(finalTarget, params, d, this, duration, easing, elasticity, delay, release);
+        const tween = createTweens(finalTarget, getValue, setValue, params, d, this, duration, easing, elasticity, delay, release);
         if (tween) {
             // return a promise associated to the last tween
             return new Promise((resolve) => {
