@@ -16,8 +16,10 @@ const demoSourceCodePlugin = {
         id.length - SOURCE_SUFFIX.length
       );
       let source = await fs.readFile(fileId, "utf8");
-      source = source.replace(/^[\s\S]*(async function animation)/, '$1').replace(/ $/, '');
-      source = source.replace(/<\/script>[\s\S]*$/, '').replace(/ $/, '');
+      source = source
+        .replace(/^[\s\S]*(async function animation)/, "$1")
+        .replace(/ $/, "");
+      source = source.replace(/<\/script>[\s\S]*$/, "").replace(/ $/, "");
       return `export default ${JSON.stringify(source)};`;
     }
     return null;
@@ -33,7 +35,7 @@ const demoSourceCodePlugin = {
 };
 
 export default {
-  input: "src/demo/main.js",
+  input: "src/demo/main.ts",
   output: {
     file: "dist/demo/demo.js",
     sourcemap: true,
@@ -49,7 +51,8 @@ export default {
       extensions: [".mjs", ".js", ".ts", ".svelte"]
     }),
     typescript({
-      objectHashIgnoreUnknownHack: true
+      objectHashIgnoreUnknownHack: true,
+      tsconfig: "tsconfig.demo.json"
     }),
     svelte({
       css: function(css) {
