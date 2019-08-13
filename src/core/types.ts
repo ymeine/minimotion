@@ -2,13 +2,6 @@ export type Selector = HTMLElement | string;
 
 export type Target = HTMLElement | null;
 
-// export interface ProcessFunctionArg {
-//     property: string;
-//     value: string;
-//     target?: Target;
-// }
-// export type ProcessFunction = (arg: ProcessFunctionArg) => void;
-
 export type ResolvedTarget = Target;
 
 export interface SelectorContext {
@@ -16,6 +9,17 @@ export interface SelectorContext {
     querySelectorAll(selector: string): HTMLElement[] | null;
 }
 
+export interface ValueAccessorCommonArgs {
+    target: Target;
+    property: string;
+    type: TweenType;
+}
+
+export interface SetValueArg extends ValueAccessorCommonArgs {
+    value: string;
+}
+export type GetValue = (arg: ValueAccessorCommonArgs) => 'string';
+export type SetValue = (arg: SetValueArg) => void;
 
 type StyleNumber = number | string | (number | string)[];
 
@@ -25,8 +29,8 @@ export interface Instructions {
 
 export interface ControlParams {
     target?: Selector;
-    getValue?: Function;
-    setValue?: Function;
+    getValue?: GetValue;
+    setValue?: SetValue;
     easing?: (elapsed: number, elasticity: number) => number;    // e.g. easeInOutQuad
     duration?: number;              // e.g. 1000
     delay?: number;                 // e.g. 1000 -> delay before execution

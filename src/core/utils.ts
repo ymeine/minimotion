@@ -60,32 +60,29 @@ export function getAnimationType(target: ResolvedTarget, propName: string): Twee
 export const dom = {
     /**
      * Return the current value of a targeted property
-     * @param targetElt 
-     * @param propName 
-     * @param propType 
      */
-    getValue(targetElt, propName, propType) {
-        switch (propType) {
-            case 'css': return dom.getCSSValue(targetElt, propName);
-            case 'transform': return getTransformValue(targetElt, propName);
-            case 'attribute': return targetElt.getAttribute(propName);
+    getValue({target, property, type}) {
+        switch (type) {
+            case 'css': return dom.getCSSValue(target, property);
+            case 'transform': return getTransformValue(target, property);
+            case 'attribute': return target.getAttribute(property);
         }
     },
 
-    setValue(targetElt, propName, propType, value) {
-        if (!targetElt) return;
-        switch (propType) {
+    setValue({target, property, type, value}) {
+        if (!target) return;
+        switch (type) {
             case 'css':
-                targetElt.style[propName] = value;
+                target.style[property] = value;
                 break;
             case 'transform':
-                setTransformValue(targetElt, propName, value);
+                setTransformValue(target, property, value);
                 break;
             case 'attribute':
-                targetElt.setAttribute(propName, value);
+                target.setAttribute(property, value);
                 break;
             default:
-                console.log("[animate] unsupported animation type: " + propType);
+                console.log("[animate] unsupported animation type: " + type);
         }
     },
 

@@ -4,18 +4,19 @@
 
   async function animation(a) {
 	const model = {
-		translate1: 0,
-		rotate: 0,
-		translate2: 0,
+		translate1: '0',
+		rotation: '0',
+		translate2: '0',
 	};
 
 	a.animate({
 		target: '.square',
-		setValue: (target, property, type, value) => {
-			console.log('called');
+		
+		getValue: ({property}) => model[property],
+		setValue: ({target, property, value}) => {
 			model[property] = value;
-			const {translate1, rotation, translate2} = model;
 
+			const {translate1, rotation, translate2} = model;
 			target.style.transform = [
 				`translateX(${translate1}px)`,
 				`rotate(${rotation}deg)`,
@@ -27,9 +28,9 @@
 		duration: 1000,
 		easing: easeInOutCubic,
 
-		translate1: [0, 475],
-		rotation: [0, 90],
-		translate2: [0, 160],
+		translate1: 475,
+		rotation: 90,
+		translate2: 160,
 	});
   }
 </script>

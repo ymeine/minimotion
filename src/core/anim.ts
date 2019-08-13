@@ -14,6 +14,8 @@ import {
     PlayArguments,
     PlayParams,
     Target,
+    GetValue,
+    SetValue,
 } from './types';
 import { easeOutElastic } from './easings';
 import { log, parseValue, dom } from './utils';
@@ -571,8 +573,8 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
         // read all control args
         const d = this.settings,
             target = parseValue("target", params, d) as Selector,
-            getValue = parseValue("getValue", params, d) as Function,
-            setValue = parseValue("setValue", params, d) as Function,
+            getValue = parseValue("getValue", params, d) as GetValue,
+            setValue = parseValue("setValue", params, d) as SetValue,
             easing = parseValue("easing", params, d) as Function,
             speed = parseValue("speed", params, d) as number,
             duration = convertDuration(parseValue("duration", params, d), speed), // convertDuration
