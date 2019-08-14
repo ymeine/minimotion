@@ -32,7 +32,7 @@
 			].join(' ');
 			alphabetIndex = model.alphabetIndex;
 
-			target.firstElementChild.style.transform = `rotate(-${rotation}deg)`
+			target.firstElementChild.style.transform = `rotate(-${rotation}deg)`;
 		},
 
 		delay: 200,
