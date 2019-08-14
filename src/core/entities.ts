@@ -224,7 +224,7 @@ export class Tween extends TimelineEntity {
 
     setProgression(elapsed: number) {
         const target = this.target;
-        if (!target || !this.isValid) return;
+        if (!this.isValid) return;
         const d = this.duration,
             progression = d === 0 ? 1 : elapsed / d,
             easing = this.easing(progression, this.elasticity),

@@ -583,7 +583,7 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
             elasticity = parseValue("elasticity", params, d) as number;
 
         const finalTarget = this.select(target);
-        if (finalTarget == null) {
+        if (finalTarget == null && params.setValue == null) {
             return console.log('[anim] invalid target selector: ' + target);
         }
     
