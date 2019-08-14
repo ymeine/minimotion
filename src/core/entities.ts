@@ -191,13 +191,17 @@ export class Tween extends TimelineEntity {
             propTo = '' + propValue[1];
         } else {
             fromIsDom = true;
-            propFrom = '' + (this.getValue)({target, property: propName, type});
+            propFrom = '' + this.getValue.call(undefined, {
+                target,
+                property: propName,
+                type,
+            });
             propTo = '' + propValue;
         }
 
         this.interpolator = createInterpolator(propFrom, propTo, {
             fromIsDom,
-            propName: propName,
+            propName,
             type
         })
         return this.interpolator ? 0 /* ok */ : 102 /* invalid */;
@@ -229,7 +233,12 @@ export class Tween extends TimelineEntity {
             progression = d === 0 ? 1 : elapsed / d,
             easing = this.easing(progression, this.elasticity),
             value = this.interpolator!.getValue(easing);
-        (this.setValue)({target, property: this.propName, type: this.type, value});
+        this.setValue.call(undefined, {
+            target,
+            property: this.propName,
+            type: this.type,
+            value,
+        });
     }
 }
 
