@@ -54,7 +54,7 @@ export function getAnimationType(target: ResolvedTarget, propName: string): Twee
         if (TRANSFORMS[propName] === 1) return 'transform';
         return 'css';
     }
-    return 'invalid';
+    return 'custom';
 }
 
 export const dom = {
