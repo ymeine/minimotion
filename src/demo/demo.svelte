@@ -31,7 +31,6 @@
     font-size: 1;
     margin: 0;
     height: 100vh;
-    width: 100vw;
     color: #ffffff;
     background-color: #222222;
   }
@@ -49,6 +48,7 @@
     display: grid;
     gap: 1em;
     grid-template-rows: auto 1fr;
+    overflow: auto;
   }
 
   .demo-title {
