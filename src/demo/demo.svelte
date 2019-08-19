@@ -1,4 +1,6 @@
 <script>
+  import 'prismjs/themes/prism-dark.css';
+
   import Sidebar from "./sidebar";
   import { DEMOS } from "./samples";
   let activeDemo = DEMOS.find(demo => demo.type != "category");
@@ -23,6 +25,8 @@
   }
 
   fromHash();
+
+  let highlighted;
 
   $: toHash(activeDemo);
 </script>
@@ -76,7 +80,7 @@
     <div class="demo-title">{activeDemo.title}</div>
     <div>
       <svelte:component this={activeDemo.sample} />
-      <pre class="source">{activeDemo.source}</pre>
+      <pre><code class="typescript">{@html activeDemo.source}</code></pre>
     </div>
   </div>
 </div>
