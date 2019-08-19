@@ -4,6 +4,9 @@ import resolve from "rollup-plugin-node-resolve";
 import gzip from "rollup-plugin-gzip";
 import { terser } from "rollup-plugin-terser";
 import svelte from "rollup-plugin-svelte";
+import postcss from 'rollup-plugin-postcss';
+import commonjs from 'rollup-plugin-commonjs';
+// import nodeResolve from 'rollup-plugin-node-resolve';
 import { promises as fs } from "fs";
 
 const SOURCE_PREFIX = "source:";
@@ -40,13 +43,14 @@ export default {
     format: "iife"
   },
   plugins: [
+    commonjs(),
     demoSourceCodePlugin,
     copy({
       targets: [{ src: "src/demo/index.html", dest: "dist/" }]
     }),
     resolve({
       mainFields: ["module"],
-      extensions: [".mjs", ".js", ".ts", ".svelte"]
+      extensions: [".mjs", ".js", ".ts", ".svelte", ".css"]
     }),
     typescript({
       objectHashIgnoreUnknownHack: true
@@ -56,6 +60,7 @@ export default {
         css.write("dist/demo/demo.css");
       }
     }),
+    postcss(),
     terser(),
     gzip()
   ]

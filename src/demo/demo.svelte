@@ -1,6 +1,33 @@
 <script>
+  import CodeMirror from "codemirror/lib/codemirror";
+  import "codemirror/lib/codemirror.css";
+  import "codemirror/mode/javascript/javascript";
+  import "codemirror/theme/material.css";
+  import { onMount, afterUpdate } from 'svelte';
+
   import Sidebar from "./sidebar";
   import { DEMOS } from "./samples";
+
+  let editorElement;
+  let editorInstance;
+
+  onMount(() => {
+    editorInstance = CodeMirror(editorElement, {
+      value: activeDemo.source,
+      lineNumbers: true,
+      readOnly: true,
+      theme: 'material',
+      mode: {
+        name: 'javascript',
+        typescript: true,
+      }
+    });
+  });
+
+  afterUpdate(() => {
+    editorInstance.getDoc().setValue(activeDemo.source);
+  });
+
   let activeDemo = DEMOS[0];
 
   function fromHash() {
@@ -60,9 +87,8 @@
     border-bottom: 3px solid orange;
   }
 
-  .source {
-    padding-top: 2em;
-    font-size: larger;
+  .source-wrapper {
+    margin: 1em 0;
   }
 </style>
 
@@ -74,7 +100,7 @@
     <div class="demo-title">{activeDemo.title}</div>
     <div>
       <svelte:component this={activeDemo.sample} />
-      <pre class="source">{activeDemo.source}</pre>
+      <div bind:this={editorElement} class="source-wrapper"></div>
     </div>
   </div>
 </div>
