@@ -4,6 +4,7 @@ import resolve from "rollup-plugin-node-resolve";
 import gzip from "rollup-plugin-gzip";
 import { terser } from "rollup-plugin-terser";
 import svelte from "rollup-plugin-svelte";
+import postcss from 'rollup-plugin-postcss';
 import { promises as fs } from "fs";
 
 const SOURCE_PREFIX = "source:";
@@ -51,12 +52,15 @@ export default {
     typescript({
       objectHashIgnoreUnknownHack: true
     }),
+    postcss({
+      extensions: [ '.css' ],
+    }),
     svelte({
       css: function(css) {
         css.write("dist/demo/demo.css");
       }
     }),
-    terser(),
-    gzip()
+    // terser(),
+    // gzip()
   ]
 };

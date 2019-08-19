@@ -1,4 +1,10 @@
 <script>
+  // import * as Prism from 'prismjs'
+  // import 'highlight.js/styles/github.css';
+  // import * as hljs from 'highlight.js/lib/highlight';
+  // import * as typescript from 'highlight.js/lib/languages/typescript';
+  // hljs.registerLanguage('typescript', typescript);
+
   import Sidebar from "./sidebar";
   import { DEMOS } from "./samples";
   let activeDemo = DEMOS[0];
@@ -22,7 +28,16 @@
 
   fromHash();
 
+  function highlightSource() {
+    const {source} = activeDemo;
+    if (source == null) { return null; }
+    // return Prism.highlight(activeDemo.source, Prism.languages.typescript, 'typescript');
+    return hljs.highlight('typescript', source).value;
+    // return source;
+  }
+
   $: toHash(activeDemo);
+  $: highlightedSource = highlightSource();
 </script>
 
 <style>
@@ -75,6 +90,13 @@
     <div>
       <svelte:component this={activeDemo.sample} />
       <pre class="source">{activeDemo.source}</pre>
+      <pre><code class="typescript">{@html highlightedSource}</code></pre>
     </div>
   </div>
 </div>
+    <!-- /* padding-top: 2em; */
+    font-size: larger;
+    background: black;
+    color: lightgreen;
+    padding: 1em;
+    border-radius: 0.5em; -->
