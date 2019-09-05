@@ -20,71 +20,115 @@ export const TRANSFORMS = {
   perspective: 1
 };
 
-export function getTransformUnit(propName: string) {
-  if (stringContains(propName, "translate") || propName === "perspective") {
+/**
+ * Determines and returns which unit the given transform function name is using.
+ *  
+ * @param functionName The name of the transform function to get unit for
+ */
+export function getTransformUnit(functionName: string) {
+  if (stringContains(functionName, "translate") || functionName === "perspective") {
     return "px";
   }
-  if (stringContains(propName, "rotate") || stringContains(propName, "skew")) {
+  if (stringContains(functionName, "rotate") || stringContains(functionName, "skew")) {
     return "deg";
   }
   return "";
 }
 
-export function getElementTransforms(el: HTMLElement) {
-  const str = el.style.transform || "";
-  const reg = /(\w+)\(([^)]*)\)/g;
+/**
+ * Extracts the function calls from the transform chain string, to get the list of applied transformations.
+ * 
+ * It stores the information into a Map, therefore keeping the order which is important,
+ * and for which the key is the transform function name and the value its single argument.
+ * 
+ * @param element The element to parse the transform chain from.
+ */
+export function getElementTransforms(element: HTMLElement) {
+  const string = element.style.transform || "";
+  const regexp = /(\w+)\(([^)]*)\)/g;
   const transforms = new Map<string, string>();
-  let m: RegExpExecArray | null;
-  while ((m = reg.exec(str))) {
-    transforms.set(m[1], m[2]);
+  let matches: RegExpExecArray | null;
+  while ((matches = regexp.exec(string))) {
+    transforms.set(matches[1], matches[2]);
   }
   return transforms;
 }
 
 let elementTransformsCache = new WeakMap<HTMLElement, Map<string, string>>();
-export function getFastElementTransforms(el: HTMLElement) {
-  let result = elementTransformsCache.get(el);
+/**
+ * Cached version of `getElementTransforms`.
+ * 
+ * @see clearFastElementTransformsCache
+ * @see getElementTransforms
+ */
+export function getFastElementTransforms(element: HTMLElement) {
+  let result = elementTransformsCache.get(element);
   if (!result) {
-    result = getElementTransforms(el);
-    elementTransformsCache.set(el, result);
+    result = getElementTransforms(element);
+    elementTransformsCache.set(element, result);
   }
   return result;
 }
 
-export function clearFastElementTransformsCache(el?: HTMLElement) {
-  if (el) {
-    elementTransformsCache.delete(el);
+/**
+ * Clears the cache for `getFastElementTransforms`.
+ * 
+ * @param element Pass the element to clear only its cache entry, or none to clear the whole cache.
+ */
+export function clearFastElementTransformsCache(element?: HTMLElement) {
+  if (element) {
+    elementTransformsCache.delete(element);
   } else {
     elementTransformsCache = new WeakMap();
   }
 }
 
+/**
+ * Generates the transform chain string from a Map as the one returned by `getElementTransforms`.
+ * 
+ * @param transforms The Map of transforms. 
+ */
 export function stringifyTransforms(transforms: Map<string, string>) {
-  let output = "";
-  for (const entry of transforms.entries()) {
-    output += ` ${entry[0]}(${entry[1]})`;
-  }
-  return output;
+  return Array.from(transforms.entries())
+    .map(([fn, arg]) => `${fn}(${arg})`)
+    .join(' ');
 }
 
-export function getTransformValue(el: HTMLElement, propName: string) {
-  if (propName === "transform") {
-    return el.style.transform || "";
+/**
+ * Returns either the full transform chain if given property is named `"transform"`, or a specific transform function's value.
+ * 
+ * If the transform function cannot be found, it will return a default value: `1` for the specific case of `scale`, or `0` along with a unit (if applicable) otherwise.
+ * 
+ * @param element The element to get transform or specific transform function argument from
+ * @param propertyName `transform` to get the whole chain, or the name of the function to get its value
+ */
+export function getTransformValue(element: HTMLElement, propertyName: string) {
+  if (propertyName === "transform") {
+    return element.style.transform || "";
   }
   return (
-    getFastElementTransforms(el).get(propName) ||
-    (stringContains(propName, "scale") ? "1" : 0 + getTransformUnit(propName))
+    getFastElementTransforms(element).get(propertyName) ||
+    (stringContains(propertyName, "scale") ? "1" : 0 + getTransformUnit(propertyName))
   );
 }
 
-export function setTransformValue(el: HTMLElement, propName: string, value) {
-  if (propName === "transform") {
-    el.style.transform = value;
-    clearFastElementTransformsCache(el);
+/**
+ * Sets either the whole transform chain or a specific transform function argument.
+ * 
+ * When setting a particular function, updates the cache, otherwise if setting everything it clears it.
+ * 
+ * @param element The element to set transform / transform function on
+ * @param propertyName `transform` to set the whole chain, or the name of the function to set its value
+ * @param value The value to set
+ */
+export function setTransformValue(element: HTMLElement, propertyName: string, value) {
+  if (propertyName === "transform") {
+    element.style.transform = value;
+    clearFastElementTransformsCache(element);
     return;
   }
-  const transforms = getFastElementTransforms(el);
-  transforms.set(propName, value);
+  const transforms = getFastElementTransforms(element);
+  transforms.set(propertyName, value);
   const transform = stringifyTransforms(transforms);
-  el.style.transform = transform;
+  element.style.transform = transform;
 }
