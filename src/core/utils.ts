@@ -111,6 +111,8 @@ export const dom = {
             case 'css': return dom.getCSSValue(targetElement, propertyName);
             case 'transform': return getTransformValue(targetElement, propertyName);
             case 'attribute': return targetElement.getAttribute(propertyName);
+            case 'function': return undefined;
+            case 'invalid': return undefined;
         }
     },
 
