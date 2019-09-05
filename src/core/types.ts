@@ -110,21 +110,79 @@ export interface AnimContainer {
 }
 
 export interface AnimEntity {
+    /**
+     * The name of the entity.
+     */
     name: string;
-    isRunning: boolean;                // true if the entity is in its parent timeline running list
-    startRegistered: boolean;          // false if the entity hasn't registered in the parent start markers
-    endRegistered: boolean;            // false if the entity hasn't registered in the parent end markers
-    nextEntity: AnimEntity | null;     // next entity in the running list
+
+    /**
+     * `true` if the entity is in its parent timeline running list.
+     */
+    isRunning: boolean;
+
+    /**
+     * `false` if the entity has not registered in the parent start markers.
+     */
+    startRegistered: boolean;
+
+    /**
+     * `false` if the entity has not registered in the parent end markers.
+     */
+    endRegistered: boolean;
+
+    /**
+     * Reference to the next entity in the parent timeline running list.
+     */
+    nextEntity: AnimEntity | null;
 
     // Skipping rendering leads to wrong results for animations that rely on reading the current value from the DOM
-    // skipRendering: boolean;            // true if rendering should not be done (e.g. for duration() calculation)
+    // /** 
+    //  * `true` if rendering should not be done (e.g. for duration() calculation).
+    //  */
+    // skipRendering: boolean;
 
+    /**
+     * Attaches this entity to the given parent.
+     * 
+     * @param parent The parent to attach to.
+     */
     attach(parent: AnimContainer);
+
+    /**
+     * Initializes the entity with a given start time.
+     * 
+     * @param startTime The start time.
+     */
     init(startTime: number): void;
+
+    /**
+     * Retrieves the next or previous marker position from teh given time.
+     * 
+     * @param time The reference time to search from.
+     * @param forward Whether to search for next (when `true`) or previous (when `false`) one
+     * 
+     * @return The position of the marker.
+     */
     getNextMarkerPosition(time: number, forward: boolean): number;
+
+    /**
+     * Displays (applies) the frame corresponding to ???.
+     * 
+     * @param time ?
+     * @param targetTime ?
+     * @param forward ?
+     */
     displayFrame(time: number, targetTime: number, forward: boolean);
-    done: boolean;                     // true if the animation has completed
-    released: boolean;                 // true if the entity is released (i.e. next instructions can be run)
+    
+    /**
+     * `true` if the animation has completed.
+     */
+    done: boolean;
+    
+    /**
+     * `true` if the entity has been released (i.e. next instructions can be run).
+     */
+    released: boolean;
 
     // // isFinite: boolean; // todo
     // next(tick: number): void;    // move animation to next step and updates done and released  // next(stateHolder?)
