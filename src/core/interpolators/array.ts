@@ -8,27 +8,29 @@ export const createArrayInterpolatorFactory = (
 ): ValueInterpolatorFactory => (propFrom, propTo, options) => {
   const splitFrom = propFrom.trim().split(RX_SEPARATOR);
   if (splitFrom.length === 1) return null;
+  
   const splitTo = propTo.trim().split(RX_SEPARATOR);
+  
   const length = splitFrom.length;
-  if (length !== splitTo.length) {
-    return null;
-  }
+  if (length !== splitTo.length) return null;
+  
   const interpolators: ValueInterpolator[] = [];
-  for (let i = 0; i < length; i++) {
-    const interpolatorFactory =
-      i % 2 === 0 ? itemInterpolatorFactory : constantInterpolatorFactory;
-    const interpolator = interpolatorFactory(splitFrom[i], splitTo[i], options);
-    if (!interpolator) {
-      return null;
-    }
+  for (let index = 0; index < length; index++) {
+    const interpolatorFactory = index % 2 === 0
+      ? itemInterpolatorFactory
+      : constantInterpolatorFactory;
+
+    const interpolator = interpolatorFactory(splitFrom[index], splitTo[index], options);
+    if (!interpolator) return null;
+    
     interpolators.push(interpolator);
   }
+
   return {
     getValue(easing: number) {
-      const value = interpolators
+      return interpolators
         .map(interpolator => interpolator.getValue(easing))
         .join("");
-      return value;
     }
   };
 };

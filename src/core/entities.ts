@@ -176,11 +176,10 @@ abstract class TimelineEntity implements AnimEntity {
 /**
  * Creates a set of tweens to animate each of the given properties.
  * 
+ * @param target Forwarded to `Tween`
  * @param params The set of properties passed to the animation (also includes actual configuration parameters)
  * @param settings The set of default configuration parameters, used to detect whether the iterated property in `params` is a parameter (to ignore) or a property to animate.
  * @param parent The parent entity to attach the tween to.
- * 
- * @param target Forwarded to `Tween`
  * @param duration Forwarded to `Tween`
  * @param easing Forwarded to `Tween`
  * @param elasticity Forwarded to `Tween`

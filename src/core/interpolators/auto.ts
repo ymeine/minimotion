@@ -9,5 +9,6 @@ export const createAutoInterpolatorFactory = (
       return result;
     }
   }
+  
   return null;
 };
