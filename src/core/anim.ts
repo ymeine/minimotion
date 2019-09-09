@@ -22,11 +22,27 @@ import { log, parseValue } from './utils';
 import { Delay, PlayerEntity, createTweens } from './entities';
 
 const FRAME_MS = 16;
-const MAX_TIME = Number.MAX_SAFE_INTEGER;
-const MAX_ASYNC = 100;
-const MAX_TL_DURATION_MS = 600000; // 10mn
 
-// count the changes that can be triggered by an async call
+/**
+ * The maximum value a time property can use.
+ */
+const MAX_TIME = Number.MAX_SAFE_INTEGER;
+
+/**
+ * Maximum number of asynchronous operations that can be done in a loop.
+ */
+const MAX_ASYNC = 100;
+
+/**
+ * Default maximum duration for an animation.
+ * 
+ * It equals to 10 minutes. 
+ */
+const MAX_TL_DURATION_MS = 600000;
+
+/**
+ * Counter of the number of changes that can be triggered by an asynchronous call.
+ */
 let ASYNC_COUNTER = 0;
 
 /**
@@ -41,6 +57,9 @@ function convertDuration(durationMs: number, speed: number): number {
     return Math.round(durationMs / speed / FRAME_MS) * FRAME_MS;
 }
 
+/**
+ * The default control parameters to use for an animation.
+ */
 const defaultSettings: ControlParams = {
     easing: easeOutElastic,
     duration: 1000,
@@ -165,18 +184,18 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
 
         if (this.tlFunctionComplete && this.lastTargetForward) {
             //console.log(this.name, ": check state");
-            let ae = this.rList;
+            let animationEntity = this.rList;
             let allReleased = true;
             let allDone = false;
             let count = 0;
 
-            while (ae) {
-                // log(this.name, ": check ae: ", ae.name, " released: ", ae.released)
+            while (animationEntity) {
+                // log(this.name, ": check animation entity: ", animationEntity.name, " released: ", animationEntity.released)
                 count++
-                if (!ae.released) {
+                if (!animationEntity.released) {
                     allReleased = false;
                 }
-                ae = ae.nextEntity;
+                animationEntity = animationEntity.nextEntity;
             }
 
             // log(this.name, ": check ", count, allReleased, allDone)
@@ -308,11 +327,11 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
             }
         } else {
             // display frames for each running entity
-            let ae = this.rList;
-            while (ae) {
-                // ae.skipRendering = this.skipRendering;
-                ae.displayFrame(time, targetTime, forward);
-                ae = ae.nextEntity;
+            let animationEntity = this.rList;
+            while (animationEntity) {
+                // animationEntity.skipRendering = this.skipRendering;
+                animationEntity.displayFrame(time, targetTime, forward);
+                animationEntity = animationEntity.nextEntity;
             }
 
             // load entities from rList
@@ -323,33 +342,36 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
 
     loadEntities(time: number, forward: boolean) {
         //log(this.name, "loadEntities", time, forward);
-        const m = this.getMarker(time);
-        let startAes: AnimEntity[] | undefined, endAes: AnimEntity[] | undefined;
+        const marker = this.getMarker(time);
+        let startAnimationEntities: AnimEntity[] | undefined;
+        let endAnimationEntities: AnimEntity[] | undefined;
 
-        if (m) {
-            // console.log("marker @", time, m);
-            startAes = forward ? m.startEntities : m.endEntities;
-            endAes = forward ? m.endEntities : m.startEntities;
+        if (marker) {
+            // console.log("marker @", time, marker);
+            startAnimationEntities = forward ? marker.startEntities : marker.endEntities;
+            endAnimationEntities = forward ? marker.endEntities : marker.startEntities;
         }
 
         // add all new entities according to marker info
-        if (startAes) {
-            let idx = startAes.length, ae: AnimEntity;
-            while (idx--) {
-                ae = startAes[idx];
-                if (!ae.isRunning) {
-                    this.addEntity(ae); // will trigger a display frame
+        if (startAnimationEntities) {
+            let index = startAnimationEntities.length;
+            let animationEntity: AnimEntity;
+            while (index--) {
+                animationEntity = startAnimationEntities[index];
+                if (!animationEntity.isRunning) {
+                    this.addEntity(animationEntity); // will trigger a display frame
                 }
             }
         }
 
         // remove all done entities according to marker info
-        if (endAes) {
-            let idx = endAes.length, ae: AnimEntity;
-            while (idx--) {
-                ae = endAes[idx];
-                if (ae.isRunning) {
-                    this.removeEntity(ae);
+        if (endAnimationEntities) {
+            let index = endAnimationEntities.length;
+            let animationEntity: AnimEntity;
+            while (index--) {
+                animationEntity = endAnimationEntities[index];
+                if (animationEntity.isRunning) {
+                    this.removeEntity(animationEntity);
                 }
             }
         }
@@ -366,11 +388,15 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
             return time; // no need to dig into markers if we move to next frame
         }
 
-        let n = forward ? MAX_TIME : -1, n2 = -1, ae = this.rList, found = false;
-        while (ae) {
-            n2 = ae.getNextMarkerPosition(time, forward);
+        let n = forward ? MAX_TIME : -1;
+        let n2 = -1;
+        let animationEntity = this.rList;
+        let found = false;
 
-            log(this.name, ": ae.getNextMarkerPosition for ", ae.name, " - time: target:", time, " -> marker:", n2);
+        while (animationEntity) {
+            n2 = animationEntity.getNextMarkerPosition(time, forward);
+
+            log(this.name, ": animationEntity.getNextMarkerPosition for ", animationEntity.name, " - time: target:", time, " -> marker:", n2);
             if (n2 > -1) {
                 if (forward) {
                     // keep the min of the markers
@@ -386,43 +412,43 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
                     }
                 }
             }
-            ae = ae.nextEntity;
+            animationEntity = animationEntity.nextEntity;
         }
 
         // look in the marker list
-        let m = this.currentMarker;
-        while (m) {
+        let {currentMarker} = this;
+        while (currentMarker) {
             if (forward) {
-                if (m.time > time) {
-                    if (found && n === m.time) {
-                        this.currentMarker = m;
-                        m = undefined;
-                    } else if (m.time < n) {
+                if (currentMarker.time > time) {
+                    if (found && n === currentMarker.time) {
+                        this.currentMarker = currentMarker;
+                        currentMarker = undefined;
+                    } else if (currentMarker.time < n) {
                         // this marker is better positioned than n
-                        n = m.time;
+                        n = currentMarker.time;
                         found = true;
-                        m = m.prev; // see if prev is not closer to current time
+                        currentMarker = currentMarker.prev; // see if prev is not closer to current time
                     } else {
-                        m = undefined;
+                        currentMarker = undefined;
                     }
                 } else {
-                    m = m.next;
+                    currentMarker = currentMarker.next;
                 }
             } else {
-                if (m.time < time) {
-                    if (found && n === m.time) {
-                        this.currentMarker = m;
-                        m = undefined;
-                    } else if (m.time > n) {
+                if (currentMarker.time < time) {
+                    if (found && n === currentMarker.time) {
+                        this.currentMarker = currentMarker;
+                        currentMarker = undefined;
+                    } else if (currentMarker.time > n) {
                         // this marker is better positioned than n
-                        n = m.time;
+                        n = currentMarker.time;
                         found = true;
-                        m = m.next; // see if next is not closer to current time
+                        currentMarker = currentMarker.next; // see if next is not closer to current time
                     } else {
-                        m = undefined;
+                        currentMarker = undefined;
                     }
                 } else {
-                    m = m.prev;
+                    currentMarker = currentMarker.prev;
                 }
             }
         }
@@ -431,68 +457,68 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
         return found ? n : -1;
     }
 
-    addEntity(ae: AnimEntity) {
+    addEntity(animationEntity: AnimEntity) {
         // this function is called through the calls done in the timeline function
-        log(this.name, ": addEntity", ae.name, " @", this.currentTime);
+        log(this.name, ": addEntity", animationEntity.name, " @", this.currentTime);
         ASYNC_COUNTER++;
-        if (!ae.startRegistered) {
-            ae.init(this.currentTime);
-            const m = this.createMarker(this.currentTime);
-            if (!m.startEntities) {
-                m.startEntities = [ae];
+        if (!animationEntity.startRegistered) {
+            animationEntity.init(this.currentTime);
+            const marker = this.createMarker(this.currentTime);
+            if (!marker.startEntities) {
+                marker.startEntities = [animationEntity];
             } else {
-                m.startEntities.push(ae);
+                marker.startEntities.push(animationEntity);
             }
-            ae.startRegistered = true;
+            animationEntity.startRegistered = true;
         }
 
-        ae.nextEntity = null;
+        animationEntity.nextEntity = null;
         if (!this.rListEnd) {
-            this.rList = ae;
-            this.rListEnd = ae;
+            this.rList = animationEntity;
+            this.rListEnd = animationEntity;
         } else {
             // append new entity at the end
-            this.rListEnd.nextEntity = ae;
-            this.rListEnd = ae;
+            this.rListEnd.nextEntity = animationEntity;
+            this.rListEnd = animationEntity;
         }
-        ae.isRunning = true;
-        // ae.skipRendering = this.skipRendering;
-        ae.displayFrame(this.currentTime, this.lastTargetTime, this.lastTargetForward);
+        animationEntity.isRunning = true;
+        // animationEntity.skipRendering = this.skipRendering;
+        animationEntity.displayFrame(this.currentTime, this.lastTargetTime, this.lastTargetForward);
     }
 
-    removeEntity(ae: AnimEntity) {
-        log(this.name, ": removeEntity", ae.name, "@", this.currentTime);
+    removeEntity(animationEntity: AnimEntity) {
+        log(this.name, ": removeEntity", animationEntity.name, "@", this.currentTime);
         ASYNC_COUNTER++;
-        let e = this.rList;
-        if (!ae.endRegistered && this.lastTargetForward) {
+        let entity = this.rList;
+        if (!animationEntity.endRegistered && this.lastTargetForward) {
             // only register the end in forward mode
-            const m = this.createMarker(this.currentTime);
-            if (!m.endEntities) {
-                m.endEntities = [ae];
+            const marker = this.createMarker(this.currentTime);
+            if (!marker.endEntities) {
+                marker.endEntities = [animationEntity];
             } else {
-                m.endEntities.push(ae);
+                marker.endEntities.push(animationEntity);
             }
-            ae.endRegistered = true;
+            animationEntity.endRegistered = true;
         }
-        if (e === ae) {
-            this.rList = ae.nextEntity;
-            if (this.rListEnd === ae) {
+        if (entity === animationEntity) {
+            this.rList = animationEntity.nextEntity;
+            if (this.rListEnd === animationEntity) {
                 this.rListEnd = null;
             }
         } else {
-            while (e) {
-                if (e.nextEntity === ae) {
-                    e.nextEntity = ae.nextEntity;
-                    if (this.rListEnd === ae) {
-                        this.rListEnd = e;
+            while (entity) {
+                if (entity.nextEntity === animationEntity) {
+                    entity.nextEntity = animationEntity.nextEntity;
+                    if (this.rListEnd === animationEntity) {
+                        this.rListEnd = entity;
                     }
-                    e = null;
+                    entity = null;
                 } else {
-                    e = e.nextEntity;
+                    entity = entity.nextEntity;
                 }
             }
         }
-        ae.isRunning = false;
+        animationEntity.isRunning = false;
     }
 
     /**
@@ -633,19 +659,7 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
     /**
      * Starts an animation.
      * 
-     * It takes a single parameter object, with the following properties: 
-     * 
-     * - `target`: a DOM element, or a selector to retrieve one
-     * - timing: 
-     *     - `duration`: the duration of the animation itself (it's between the `delay` and the `release`)
-     *     - `delay`: the amount of delay to use before starting the playback of the animation
-     *     - `release`: the amount of time to wait before considering the animation is over (after delay and duration have passed). It can be negative, which means that the animation would be considered over before delay and duration have passed.
-     *     - `speed`: the speed factor to apply for the playback of the animation
-     * - interpolation: 
-     *     - `easing`: the timing function to use. An animation has a `from` source and a `to` target. Animations make the current value vary from `from` to `to`, over the specified duration. The easing function associates a time value (on the x axis) to a value within the range `[from, to]` (on the y-axis). The easing function receives two parameters: the current time, and the elasticity factor.
-     *     - `elasticity`: a factor of elasticity, making the value _bounce_ around the end of the values interval, progressively converging to `to`. It is actually passed to the easing function as a second parameter, so the latter ust implement it.
-     * 
-     * @param params The parameter object, as described above.
+     * @param params The single parameter object, please see associated documentation.
      */
     async animate(params: AnimateParams): Promise<any> {
         // read all control args

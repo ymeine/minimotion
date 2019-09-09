@@ -1,3 +1,8 @@
+/**
+ * An input to resolve to an HTML element.
+ * 
+ * Can be the element itself directly, or a selector used to retrieve a single element.
+ */
 export type Selector = HTMLElement | string;
 
 export interface TargetFunctionArg {
@@ -26,16 +31,71 @@ export interface Instructions {
     (a: Anim): void | Promise<any>;
 }
 
+/**
+ * Parameters used to control a single animation.
+ */
 export interface ControlParams {
+    /**
+     * A DOM element, or a selector to retrieve one. It is by default the target to apply the animated properties.
+     */
     target?: Target;
-    easing?: (elapsed: number, elasticity: number) => number;    // e.g. easeInOutQuad
-    duration?: number;              // e.g. 1000
-    delay?: number;                 // e.g. 1000 -> delay before execution
-    release?: number;               // e.g. -20 -> to release the function 20ms before completion
+
+    /**
+     * The timing function to use.
+     * 
+     * An animation has a `from` source and a `to` target. Animations make the current value vary from `from` to `to`, over the specified duration.
+     * 
+     * The easing function associates a time value (on the x axis) to a value within the range `[from, to]` (on the y-axis).
+     * 
+     * It receives two parameters: the current time, and the elasticity factor.
+     */
+    easing?: (elapsed: number, elasticity: number) => number;
+
+    /**
+     * The duration of the animation itself, in milliseconds.
+     * 
+     * It sits between the `delay` and the `release`.
+     */
+    duration?: number;
+
+    /**
+     * The amount of time to wait before starting the playback of the animation, in milliseconds.
+     */
+    delay?: number;
+
+    /**
+     * The amount of time to wait before considering the animation is completed (after delay and duration have passed), in milliseconds.
+     * 
+     * It can be negative, which means that the animation will be considered completed before delay and duration have passed.
+     */
+    release?: number;
+
+    /**
+     * A factor of elasticity, making the value _bounce_ around the end of the values interval, progressively converging to the target value.
+     * 
+     * It is actually passed to the easing function as a second parameter, so it is up to the latter to implement it.
+     */
     elasticity?: number;
-    speed?: number;                 // speed ratio e.g. 1 for normal speed, 2 for 2x faster, 0.5 for 2x slower
+
+    /**
+     * The speed factor to apply for the playback of the animation.
+     * 
+     * For example: 
+     * 
+     * - 1 is normal speed
+     * - 2 is twice faster
+     * - 0.5 is half speed
+     */
+    speed?: number;
 }
 
+/**
+ * Open set of properties used to defined the animation ranges per property.
+ * 
+ * The CSS transform being treated specifically, the set of transform functions that can be animated is predefined.
+ * 
+ * For the rest, you can defined any property name and it will be eventually treated accordingly to what the name might refer to: a style property, an attribute, etc.
+ */
 interface StyleParams {
     translateX?: StyleNumber;
     translateY?: StyleNumber;
@@ -54,11 +114,32 @@ interface StyleParams {
     [stylePropName: string]: any;
 }
 
+/**
+ * The type of the property being animated by the tween.
+ * 
+ * The different values mean: 
+ * 
+ * - `transform`: a CSS transform function
+ * - `attribute`: an HTML element attribute
+ * - `css`: a property of the style of an element
+ * - `function`: ...
+ * - `invalid`: could be interpolated but not applied, so rejected as invalid
+ */
 export type TweenType = 'transform' | 'attribute' | 'css' | 'function' | 'invalid';
+
+/**
+ * The set of relative operators that can be used to define bounds of an animation range.
+ */
 export type RelativeOperator = '+=' | '-=' | '*=' | '';
 
+/**
+ * The combination of control parameters - to control the animation - and animated properties - specifying their animation ranges.
+ */
 export interface AnimateParams extends ControlParams, StyleParams {
-    onUpdate?: () => void; // callback function called on any update
+    /**
+     * Callback function anytime the animation applies the result.
+     */
+    onUpdate?: () => void;
 }
 
 export interface IterationParams {
