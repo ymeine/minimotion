@@ -283,10 +283,30 @@ export interface AnimMarker {
 }
 
 export interface PlayArguments {
+    /**
+     * A callback called every time the interpolation is committed.
+     * 
+     * It receives the current time.
+     */
     onupdate?: (time: number) => void;
+    
+    /**
+     * Whether to play the animation forward or backward.
+     * 
+     * It is `true` be default. Otherwise if it is falsy it will make the animation play backwards.
+     */
     forward?: boolean;
+    
+    /**
+     * A custom `requestAnimationFrame` function. Might be useful for specific platforms or contexts.
+     */
     raf?: (callback: (time: number) => void) => void;
+    
+    /**
+     * The wanted speed to play the animation. It's a factor.
+     */
     speed?: number;
+
     // until?: number; // time position
 }
 

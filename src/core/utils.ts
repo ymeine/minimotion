@@ -8,8 +8,8 @@ let LOG_ACTIVE = false;
  * 
  * @param args Forwarded as is to `console.log`
  * 
- * @see activateLogs
- * @see deactivateLogs
+ * @see [[activateLogs]]
+ * @see [[deactivateLogs]]
  */
 export function log(...args: any[]) {
     if (LOG_ACTIVE) {
@@ -19,8 +19,8 @@ export function log(...args: any[]) {
 
 /**
  * Activates logs.
- * @see log
- * @see deactivateLogs
+ * @see [[log]]
+ * @see [[deactivateLogs]]
  */
 export function activateLogs() {
     LOG_ACTIVE = true;
@@ -28,8 +28,8 @@ export function activateLogs() {
 
 /**
  * Deactivates logs.
- * @see log
- * @see activateLogs
+ * @see [[log]]
+ * @see [[activateLogs]]
  */
 export function deactivateLogs() {
     LOG_ACTIVE = false;
@@ -47,7 +47,7 @@ export function parseValue(name, params, defaults) {
     return (v === undefined) ? defaults[name] : v;
 }
 
-// --------------------------------------------------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
 // utilities from http://animejs.com
 
 const RX_CSS_NAME = /([a-z])([A-Z])/g;

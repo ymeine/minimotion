@@ -56,10 +56,10 @@ export function getElementTransforms(element: HTMLElement) {
 
 let elementTransformsCache = new WeakMap<HTMLElement, Map<string, string>>();
 /**
- * Cached version of `getElementTransforms`.
+ * Cached version of [[getElementTransforms]].
  * 
- * @see clearFastElementTransformsCache
- * @see getElementTransforms
+ * @see [[clearFastElementTransformsCache]]
+ * @see [[getElementTransforms]]
  */
 export function getFastElementTransforms(element: HTMLElement) {
   let result = elementTransformsCache.get(element);
@@ -71,7 +71,7 @@ export function getFastElementTransforms(element: HTMLElement) {
 }
 
 /**
- * Clears the cache for `getFastElementTransforms`.
+ * Clears the cache for [[getFastElementTransforms]].
  * 
  * @param element Pass the element to clear only its cache entry, or none to clear the whole cache.
  */
@@ -84,7 +84,7 @@ export function clearFastElementTransformsCache(element?: HTMLElement) {
 }
 
 /**
- * Generates the transform chain string from a Map as the one returned by `getElementTransforms`.
+ * Generates the transform chain string from a Map as the one returned by [[getElementTransforms]].
  * 
  * @param transforms The Map of transforms. 
  */

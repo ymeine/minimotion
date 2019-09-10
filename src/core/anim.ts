@@ -21,6 +21,9 @@ import { easeOutElastic } from './easings';
 import { log, parseValue } from './utils';
 import { Delay, PlayerEntity, createTweens } from './entities';
 
+/**
+ * The duration of a single frame, in milliseconds. 
+ */
 const FRAME_MS = 16;
 
 /**
@@ -29,7 +32,7 @@ const FRAME_MS = 16;
 const MAX_TIME = Number.MAX_SAFE_INTEGER;
 
 /**
- * Maximum number of asynchronous operations that can be done in a loop.
+ * Maximum number of iterations that can be done to exhaust the asynchronous actions pipe.
  */
 const MAX_ASYNC = 100;
 
@@ -46,14 +49,14 @@ const MAX_TL_DURATION_MS = 600000;
 let ASYNC_COUNTER = 0;
 
 /**
- * Converts a duration in a number of frames.
+ * Adjusts a duration to the given speed and rounds it to an equivalent integral count of frames.
  * 
- * A frame is 16 ms at speed 1.
+ * The duration of a single frame is defined by [[FRAME_MS]].
  * 
- * @param durationMs The duration to convert, in milliseconds
+ * @param durationMs The duration to adjust, in milliseconds
  * @param speed The desired speed: it is used to divide the given duration 
  */
-function convertDuration(durationMs: number, speed: number): number {
+function adjustDuration(durationMs: number, speed: number): number {
     return Math.round(durationMs / speed / FRAME_MS) * FRAME_MS;
 }
 
@@ -69,6 +72,11 @@ const defaultSettings: ControlParams = {
     speed: 1
 }
 
+/**
+ * Ensures all scheduled asynchronous actions have been run and that it is stable.
+ * 
+ * @throws If the number of iterations made to wait for asynchronous actions reaches its limit [[MAX_ASYNC]]
+ */
 export async function exhaustAsyncPipe() {
     /* eslint require-atomic-updates: warn */
     let c1 = -1;
@@ -104,7 +112,7 @@ export async function exhaustAsyncPipe() {
 }
 
 export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
-    static convertDuration = convertDuration;
+    static convertDuration = adjustDuration;
     // skipRendering = false;
     selectorCtxt: SelectorContext | undefined;
     isRunning = false;
@@ -254,8 +262,8 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
                 if (forward !== this.lastTargetForward) {
                     // we changed direction: we may have to re-display the current frame if we are on a marker
                     // log(">> display last frame")
-                    const m = this.getMarker(currentTime);
-                    if (m) {
+                    const marker = this.getMarker(currentTime);
+                    if (marker) {
                         this.displayFrame(currentTime, timeTarget, forward);
                         await exhaustAsyncPipe();
                     }
@@ -553,7 +561,7 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
      * Retrieves an existing marker or creates a new one if none exists.
      * 
      * @param time The time position where the marker should be set
-     * @param start [optional] Marker from which to start the search (used for recursion)
+     * @param start Marker from which to start the search (used for recursion)
      */
     createMarker(time: number, start?: AnimMarker): AnimMarker {
         if (!this.firstMarker) {
@@ -668,9 +676,9 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
         const easing = parseValue("easing", params, defaults) as Function;
         const speed = parseValue("speed", params, defaults) as number;
         // convertDuration
-        const duration = convertDuration(parseValue("duration", params, defaults), speed);
-        const delay = convertDuration(parseValue("delay", params, defaults), speed);
-        const release = convertDuration(parseValue("release", params, defaults), speed);
+        const duration = adjustDuration(parseValue("duration", params, defaults), speed);
+        const delay = adjustDuration(parseValue("delay", params, defaults), speed);
+        const release = adjustDuration(parseValue("release", params, defaults), speed);
         const elasticity = parseValue("elasticity", params, defaults) as number;
 
         // identify target
@@ -705,7 +713,7 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
      * @param durationMs The duration of the delay in milliseconds
      */
     async delay(durationMs: number) {
-        const duration = convertDuration(durationMs, this.settings.speed!);
+        const duration = adjustDuration(durationMs, this.settings.speed!);
         
         if (duration > 0) {
             const delay = new Delay(duration);
@@ -874,7 +882,6 @@ function createMarker(time: number, prev?: AnimMarker, next?: AnimMarker): AnimM
     }
 }
 
-const LENGTH_UNPROCESSED = -2;
 let PLAY_COUNT = 0;
 
 function nextTimeTick(t1: number, forward: boolean, speed: number) {
@@ -886,26 +893,31 @@ function nextTimeTick(t1: number, forward: boolean, speed: number) {
 
 /**
  * A Player is responsible for handling the playback of an animation.
- * 
- * @param animFunction The animation function, which uses the provided API to execute animation steps.
- * @param animFunctionArgs Optional, a list of arguments to be passed to the animation function behind the first argument (which is the API). 
  */
 export class Player implements AnimPlayer {
     /**
      * The maximum duration to calculate the duration of the animation in milliseconds.
      * 
-     * Defaults to 600 000ms.
+     * Defaults to 600,000ms.
      * 
-     * @see `duration`
+     * @see [[duration]]
      */
-    maxDuration: number = MAX_TL_DURATION_MS;
+    protected maxDuration: number = MAX_TL_DURATION_MS;
     protected timeLine: TimeLine;
     protected currentTick = -1;
-    protected length = LENGTH_UNPROCESSED;
+    protected length: number | null = null;
     private playId = 0;
-
+    
+    /**
+     * Builds a new Player instance.
+     * 
+     * It builds for you the underlying root entity which is a [[Timeline]] entity, built using the parameters given to this constructor.
+     * 
+     * @param animFunction The animation function, which uses the provided API to execute animation steps. Used to build the [[Timeline]] entity.
+     * @param animFunctionArgs A list of arguments to be passed to the animation function after the first argument (which is the API). Used to build the [[Timeline]] entity.
+     */
     constructor(
-        public animFunction: (a: Anim, ...args: any[]) => any,
+        animFunction: (a: Anim, ...args: any[]) => any,
         animFunctionArgs?: any[]
     ) {
         this.timeLine = new TimeLine("root", animFunction, animFunctionArgs);
@@ -918,14 +930,7 @@ export class Player implements AnimPlayer {
     /**
      * Starts playing the animation using the given options.
      * 
-     * Options are passed as a single object parameter, with the following properties, all optional: 
-     * 
-     * - `onupdate`: a callback called every time the interpolation is committed. It receives the current time.
-     * - `forward`: if not given, `true` be default, otherwise if falsy will make the animation play backwards
-     * - `speed`: the speed to play the animation at; it's a factor
-     * - `raf`: a custom `requestAnimationFrame`-like function. Might be useful for specific platforms or contexts
-
-     * @param args The options object as described above. This argument itself is optional.
+     * @param args The options object.
      */
     async play(args?: PlayArguments): Promise<number> {
         let onUpdate: ((time: number) => void) | undefined;
@@ -1000,13 +1005,13 @@ export class Player implements AnimPlayer {
     /**
      * Returns the duration of this animation, in milliseconds.
      * 
-     * To know it, the player needs to run the animation fully once and only once, thus executing the animation functions which eventually provide the timing information.
+     * To know it, the player needs to run the animation fully once and only once, thus executing the user provided animation functions which eventually specify the timing information.
      * 
      * However, it doesn't apply the requested timings in order to make the animation instant.
      */
     async duration(): Promise<number> {
         // TODO support infinite duration
-        if (this.length === LENGTH_UNPROCESSED) {
+        if (this.length == null) {
             const {position} = this;
             // Skipping rendering leads to wrong results for
             // animations that rely on reading the current
@@ -1022,7 +1027,7 @@ export class Player implements AnimPlayer {
     }
 
     /**
-     * The current time in the underlying timeline, in milliseconds.
+     * The current time this player is at inside the underlying timeline, in milliseconds.
      */
     get position(): number {
         const {currentTime} = this.timeLine;
@@ -1030,7 +1035,7 @@ export class Player implements AnimPlayer {
     }
 
     /**
-     * Whether this player instance is currently playing (`true`) or not (`false`).
+     * Whether this player instance is currently playing the animation or not. Respectively `true` or `false`.
      */
     get isPlaying(): boolean {
         return this.playId !== 0;
