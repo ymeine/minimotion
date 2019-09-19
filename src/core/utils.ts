@@ -1,4 +1,4 @@
-import { TweenType, ResolvedTarget } from './types';
+import { TweenType, Target } from './types';
 import { getTransformValue, setTransformValue, TRANSFORMS } from './transforms';
 
 let LOG_ACTIVE = false;
@@ -44,7 +44,7 @@ function isSVG(el) {
  * @param target 
  * @param propName 
  */
-export function getAnimationType(target: ResolvedTarget, propName: string): TweenType {
+export function getAnimationType(target: Target, propName: string): TweenType {
     if (target != null && (target.nodeType || isSVG(target))) {
         if ((target.hasAttribute(propName) || (isSVG(target) && target[propName]))) return 'attribute';
         if (TRANSFORMS[propName] === 1) return 'transform';

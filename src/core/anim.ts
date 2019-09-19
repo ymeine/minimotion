@@ -14,6 +14,8 @@ import {
     PlayArguments,
     PlayParams,
     Target,
+    InitProperties,
+    ApplyProperties,
 } from './types';
 import { easeOutElastic } from './easings';
 import { log, parseValue } from './utils';
@@ -586,8 +588,8 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
         // read all control args
         const d = this.settings,
             target = parseValue("target", params, d) as Selector,
-            initProperties = parseValue("initProperties", params, d),
-            applyProperties = parseValue("applyProperties", params, d),
+            initProperties = parseValue("initProperties", params, d) as InitProperties,
+            applyProperties = parseValue("applyProperties", params, d) as ApplyProperties,
             easing = parseValue("easing", params, d) as Function,
             speed = parseValue("speed", params, d) as number,
             duration = convertDuration(parseValue("duration", params, d), speed), // convertDuration

@@ -1,6 +1,5 @@
-import { ControlParams, AnimEntity, AnimContainer, PlayParams, TweenType, ResolvedTarget, GetValue, InitProperties, ApplyProperties, Tween } from "./types";
+import { ControlParams, AnimEntity, AnimContainer, PlayParams, Target, GetValue, InitProperties, ApplyProperties, Tween } from "./types";
 import { parseValue, log, getAnimationType, dom } from './utils';
-import { ValueInterpolator } from './interpolators/types';
 import { createInterpolator } from './interpolators';
 
 const trunc = Math.trunc, ceil = Math.ceil;
@@ -119,7 +118,7 @@ abstract class TimelineEntity implements AnimEntity {
 }
 
 export function createTweens(
-    target: ResolvedTarget,
+    target: Target,
     initProperties: InitProperties,
     applyProperties: ApplyProperties,
     params,
@@ -137,13 +136,10 @@ export function createTweens(
         Object.keys(params)
             .filter(property => !settings.hasOwnProperty(property) && property !== 'target')
             .reduce((output, property) => (output[property] = params[property], output), {}),
-        initProperties,
-        applyProperties,
+        initProperties, applyProperties,
         duration,
-        easing,
-        elasticity,
-        delay,
-        release,
+        easing, elasticity,
+        delay, release,
     );
     tweenGroup.attach(parent);
     return tweenGroup;
@@ -160,7 +156,7 @@ export class TweenGroup extends TimelineEntity {
     private propertiesTypes = {};
 
     constructor(
-        private target: ResolvedTarget,
+        private target: Target,
         propertiesSpecs,
         initProperties: InitProperties,
         applyProperties: ApplyProperties,
@@ -174,6 +170,8 @@ export class TweenGroup extends TimelineEntity {
 
         let getValue;
         if (initProperties != null) {
+            // user initializes all at once,
+            // no matter if some properties already specify a "from" value or not
             initProperties(this.properties, target);
             getValue = property => this.properties[property];
         } else {
@@ -237,7 +235,7 @@ function tweenIsValid(value: Tween | null): value is Tween {
 }
 
 function createTween(
-    target: ResolvedTarget,
+    target: Target,
     getValue: GetValue,
     propName: string,
     propValue,

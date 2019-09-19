@@ -4,8 +4,6 @@ export type Selector = HTMLElement | string;
 
 export type Target = HTMLElement | null;
 
-export type ResolvedTarget = Target;
-
 export interface SelectorContext {
     querySelector(selector: string): HTMLElement | null;
     querySelectorAll(selector: string): NodeListOf<HTMLElement> | HTMLElement[];
@@ -18,7 +16,6 @@ export interface Instructions {
 }
 
 export type GetValue = (property: string, target: Target, type: TweenType) => 'string';
-export type SetValue = (property: string, target: Target, type: TweenType, value: string) => void;
 
 export type InitProperties = (properties: Object, target: Target) => void;
 export type ApplyProperties = InitProperties;
