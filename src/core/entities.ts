@@ -188,8 +188,6 @@ export class TweenGroup extends TimelineEntity {
             };
         } else {
             const propertiesTypes = {};
-            // maybe reset that everytime a display frame ended instead?
-            // dunno if all values get updated all the time
 
             setValue = (property, target, type, value) => {
                 this.propertiesSet[property] = true;
@@ -206,36 +204,47 @@ export class TweenGroup extends TimelineEntity {
             };
         }
 
-        this.tweens = Object.entries(propertiesSpecs).map(([propName, propSpec]) => new Tween(
-            target,
-            getValue,
-            setValue,
-            propName,
-            propSpec,
-            duration,
-            easing,
-            elasticity,
-            delay,
-            release,
-        ));
+        this.tweens = Object.entries(propertiesSpecs)
+            .map(([propName, propSpec]) => new Tween(
+                target,
+                getValue,
+                setValue,
+                propName,
+                propSpec,
+                duration,
+                easing,
+                elasticity,
+            ))
+            .filter(tween => tween.isValid);
     }
-
-    init(startTime: number) {
-        super.init(startTime);
-        this.tweens.forEach(tween => tween.init(startTime));
-    }
-
+    
     displayFrame(time: number, targetTime: number, forward: boolean) {
         if (time >= this.delayTime && time <= this.endTime) {
-            this.tweens.forEach(tween => tween.displayFrame(time, targetTime, forward));
-            (this.applyProperties)(this.properties, this.target);
+            let progression;
+            const targetFrame = time === targetTime;
+            if ((targetFrame && this.delayTime <= time && time <= this.doneTime)) {
+                progression = time - this.delayTime;
+            } else if (!targetFrame) {
+                if (forward && targetTime >= this.doneTime && time === this.doneTime) {
+                    progression = time - this.delayTime;
+                } else if (!forward && targetTime <= this.delayTime && time === this.delayTime) {
+                    progression = 0;
+                }
+            }
+
+            if (progression != null) {
+                this.tweens.forEach(tween => tween.setProgression(progression));
+                (this.applyProperties)(this.properties, this.target);
+            };
+
             this.checkDoneAndRelease(time, forward);
         }
+
         this.propertiesSet = {};
     }
 }
 
-export class Tween extends TimelineEntity {
+export class Tween {
     isValid = true;
     type: TweenType;
     interpolator: ValueInterpolator | null;
@@ -249,13 +258,8 @@ export class Tween extends TimelineEntity {
         public duration: number,
         public easing,
         public elasticity: number,
-        delay: number,
-        release: number
     ) {
         // todo normalize from / to, support colors, etc.
-        super("tween#" + ++AE_COUNT);
-        this.delay = delay;
-        this.release = release;
         const r = this.parsePropValue(propValue);
         if (r !== 0) {
             console.error("[animate] invalid syntax (Error " + r + ")");
@@ -295,23 +299,6 @@ export class Tween extends TimelineEntity {
             type
         })
         return this.interpolator ? 0 /* ok */ : 102 /* invalid */;
-    }
-
-    displayFrame(time: number, targetTime: number, forward: boolean) {
-        log(this.name, ": display frame", time, targetTime, forward)
-        
-        const targetFrame = time === targetTime;
-        if ((targetFrame && this.delayTime <= time && time <= this.doneTime)) {
-            this.setProgression(time - this.delayTime);
-        } else if (!targetFrame) {
-            if (forward && targetTime >= this.doneTime && time === this.doneTime) {
-                this.setProgression(time - this.delayTime);
-            } else if (!forward && targetTime <= this.delayTime && time === this.delayTime) {
-                this.setProgression(0);
-            }
-        }
-        
-        this.checkDoneAndRelease(time, forward);
     }
 
     setProgression(elapsed: number) {
