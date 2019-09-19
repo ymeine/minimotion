@@ -1,3 +1,5 @@
+import { ValueInterpolator } from './interpolators';
+
 export type Selector = HTMLElement | string;
 
 export type Target = HTMLElement | null;
@@ -52,6 +54,13 @@ interface StyleParams {
 }
 
 export type TweenType = 'transform' | 'attribute' | 'css' | 'custom';
+
+export interface Tween {
+    propName: string;
+    type: TweenType;
+    interpolator: ValueInterpolator<string>;
+}
+
 export type RelativeOperator = '+=' | '-=' | '*=' | '';
 
 export interface AnimateParams extends ControlParams, StyleParams {

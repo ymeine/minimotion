@@ -439,38 +439,6 @@ describe("animate", () => {
         ], "logs");
     });
 
-    it("should support applyProperties with a delay", async function () {
-        const player = new TestPlayer([], animate);
-
-        let currentTick: number | null = null;
-        const propertiesSnapshots: any[] = [];
-
-        function animate(a) {
-            a.animate({
-                applyProperties: (properties) => {
-                    propertiesSnapshots.push({tick: currentTick, properties: Object.assign({}, properties)})
-                },
-                delay: 17,
-                duration: 48,
-                easing: linear,
-
-                length: [0, 100],
-                color: ['#000000', '#FFFFFF'],
-            });
-        }
-
-        await player.play({
-            onupdate: (time) => {
-                currentTick = time / 16;
-            },
-        });
-        assert.deepEqual(propertiesSnapshots, [
-            {tick: 1, properties: {length: '0', color: 'rgba(0, 0, 0, 1)'}},
-            {tick: 2, properties: {length: '50', color: 'rgba(128, 128, 128, 1)'}},
-            {tick: 3, properties: {length: '100', color: 'rgba(255, 255, 255, 1)'}},
-        ]);
-    });
-
     // transform prop
     // svg attributes
 

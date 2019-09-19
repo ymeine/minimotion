@@ -1,4 +1,4 @@
-import { ControlParams, AnimEntity, AnimContainer, PlayParams, TweenType, ResolvedTarget, GetValue, SetValue, InitProperties, ApplyProperties } from "./types";
+import { ControlParams, AnimEntity, AnimContainer, PlayParams, TweenType, ResolvedTarget, GetValue, InitProperties, ApplyProperties, Tween } from "./types";
 import { parseValue, log, getAnimationType, dom } from './utils';
 import { ValueInterpolator } from './interpolators/types';
 import { createInterpolator } from './interpolators';
@@ -131,13 +131,12 @@ export function createTweens(
     delay: number,
     release: number
 ) {
-    const propertiesSpecs = Object.keys(params)
-        .filter(property => !settings.hasOwnProperty(property) && property !== 'target')
-        .reduce((output, property) => (output[property] = params[property], output), {});
-
-    const tween = new TweenGroup(
+    const tweenGroup = new TweenGroup(
         target,
-        propertiesSpecs,
+        // properties specifications
+        Object.keys(params)
+            .filter(property => !settings.hasOwnProperty(property) && property !== 'target')
+            .reduce((output, property) => (output[property] = params[property], output), {}),
         initProperties,
         applyProperties,
         duration,
@@ -146,24 +145,28 @@ export function createTweens(
         delay,
         release,
     );
-    tween.attach(parent);
-    return tween;
+    tweenGroup.attach(parent);
+    return tweenGroup;
 }
 
 export class TweenGroup extends TimelineEntity {
     isValid = true;
+    
+    private applyProperties: ApplyProperties;
+    
     private tweens: Tween[];
-    private properties: Object = {};
-    private propertiesSet = {};
+
+    private properties = {};
+    private propertiesTypes = {};
 
     constructor(
         private target: ResolvedTarget,
         propertiesSpecs,
         initProperties: InitProperties,
-        private applyProperties: ApplyProperties,
+        applyProperties: ApplyProperties,
         public duration: number,
-        easing,
-        elasticity: number,
+        private easing,
+        private elasticity: number,
         public delay: number,
         public release: number
     ) {
@@ -181,140 +184,102 @@ export class TweenGroup extends TimelineEntity {
             };
         }
 
-        let setValue;
-        if (applyProperties != null) {
-            setValue = (property, target, type, value) => {
-                this.properties[property] = value;
+        this.applyProperties = applyProperties != null
+            ? applyProperties
+            : (properties, target) => {
+                const {propertiesTypes} = this;
+                Object.entries(properties).forEach(([property, value]) => {
+                    dom.setValue(property, target, propertiesTypes[property], value);
+                });
             };
-        } else {
-            const propertiesTypes = {};
-
-            setValue = (property, target, type, value) => {
-                this.propertiesSet[property] = true;
-                this.properties[property] = value;
-                propertiesTypes[property] = type;
-            };
-
-            this.applyProperties = (properties, target) => {
-                for (const [property, value] of Object.entries(properties)) {
-                    if (this.propertiesSet[property]) {
-                        dom.setValue(property, target, propertiesTypes[property], value);
-                    }
-                }
-            };
-        }
 
         this.tweens = Object.entries(propertiesSpecs)
-            .map(([propName, propSpec]) => new Tween(
-                target,
-                getValue,
-                setValue,
-                propName,
-                propSpec,
-                duration,
-                easing,
-                elasticity,
-            ))
-            .filter(tween => tween.isValid);
+            .map(([propName, propSpec]) => createTween(target, getValue, propName, propSpec))
+            .filter(tweenIsValid);
     }
     
     displayFrame(time: number, targetTime: number, forward: boolean) {
-        if (time >= this.delayTime && time <= this.endTime) {
-            let progression;
-            const targetFrame = time === targetTime;
-            if ((targetFrame && this.delayTime <= time && time <= this.doneTime)) {
-                progression = time - this.delayTime;
-            } else if (!targetFrame) {
-                if (forward && targetTime >= this.doneTime && time === this.doneTime) {
-                    progression = time - this.delayTime;
-                } else if (!forward && targetTime <= this.delayTime && time === this.delayTime) {
-                    progression = 0;
-                }
+        if (!(time >= this.delayTime && time <= this.endTime)) return;
+
+        let elapsed;
+        const targetFrame = time === targetTime;
+        if ((targetFrame && this.delayTime <= time && time <= this.doneTime)) {
+            elapsed = time - this.delayTime;
+        } else if (!targetFrame) {
+            if (forward && targetTime >= this.doneTime && time === this.doneTime) {
+                elapsed = time - this.delayTime;
+            } else if (!forward && targetTime <= this.delayTime && time === this.delayTime) {
+                elapsed = 0;
             }
-
-            if (progression != null) {
-                this.tweens.forEach(tween => tween.setProgression(progression));
-                (this.applyProperties)(this.properties, this.target);
-            };
-
-            this.checkDoneAndRelease(time, forward);
         }
 
-        this.propertiesSet = {};
+        if (elapsed != null) {
+            const {properties, propertiesTypes, applyProperties, duration, easing, elasticity} = this;
+            this.tweens.forEach(tween => {
+                const property = tween.propName;
+
+                propertiesTypes[property] = tween.type;
+                properties[property] = tween.interpolator.getValue(easing(
+                    duration === 0 ? 1 : elapsed / duration,
+                    elasticity,
+                ));
+            });
+
+            applyProperties(properties, this.target);
+        };
+
+        this.checkDoneAndRelease(time, forward);
     }
 }
 
-export class Tween {
-    isValid = true;
-    type: TweenType;
-    interpolator: ValueInterpolator | null;
+function tweenIsValid(value: Tween | null): value is Tween {
+    return value != null;
+}
 
-    constructor(
-        public target: ResolvedTarget,
-        public getValue: GetValue,
-        public setValue: SetValue,
-        public propName: string,
-        propValue,
-        public duration: number,
-        public easing,
-        public elasticity: number,
-    ) {
-        // todo normalize from / to, support colors, etc.
-        const r = this.parsePropValue(propValue);
-        if (r !== 0) {
-            console.error("[animate] invalid syntax (Error " + r + ")");
-            this.isValid = false;
-        }
+function createTween(
+    target: ResolvedTarget,
+    getValue: GetValue,
+    propName: string,
+    propValue,
+): Tween | null {
+    function terminate(result) {
+        console.error("[animate] invalid syntax (Error " + result + ")");
+        return null;
     }
 
-    // return 0 if ok
-    parsePropValue(propValue): number {
-        // - define tween type: style, attribute or transform
-        // - get to value & unit, determine if relative (i.e. starts with "+" or "-")
-        // - get from value (unit should be the same as to)
-        // - identify value type (dimension, color, unit-less)
-        const target = this.target,
-            propName = this.propName,
-            type = this.type = getAnimationType(target, propName);
+    // - define tween type: style, attribute or transform
+    // - get to value & unit, determine if relative (i.e. starts with "+" or "-")
+    // - get from value (unit should be the same as to)
+    // - identify value type (dimension, color, unit-less)
+    const type = getAnimationType(target, propName);
 
-        let fromIsDom = false;
-        let propFrom: any, propTo: any;
-        if (Array.isArray(propValue)) {
-            if (propValue.length !== 2) return 101;
-            propFrom = '' + propValue[0];
-            propTo = '' + propValue[1];
-        } else {
-            fromIsDom = true;
-            propFrom = '' + (this.getValue)(
-                propName,
-                target,
-                type,
-            );
-            propTo = '' + propValue;
-        }
-
-        this.interpolator = createInterpolator(propFrom, propTo, {
-            fromIsDom,
-            propName,
-            type
-        })
-        return this.interpolator ? 0 /* ok */ : 102 /* invalid */;
+    let fromIsDom = false;
+    let propFrom: any, propTo: any;
+    if (Array.isArray(propValue)) {
+        if (propValue.length !== 2) return terminate(101);
+        propFrom = '' + propValue[0];
+        propTo = '' + propValue[1];
+    } else {
+        fromIsDom = true;
+        propFrom = '' + getValue(propName, target, type);
+        propTo = '' + propValue;
     }
 
-    setProgression(elapsed: number) {
-        const target = this.target;
-        if (!this.isValid) return;
-        const d = this.duration,
-            progression = d === 0 ? 1 : elapsed / d,
-            easing = this.easing(progression, this.elasticity),
-            value = this.interpolator!.getValue(easing);
-        (this.setValue)(
-            this.propName,
-            target,
-            this.type,
-            value,
-        );
+    const interpolator = createInterpolator(propFrom, propTo, {
+        fromIsDom,
+        propName,
+        type
+    })
+
+    if (interpolator == null) {
+        return terminate(102);
     }
+
+    return {
+        propName,
+        type,
+        interpolator,
+    };
 }
 
 export class Delay extends TimelineEntity {
