@@ -9,28 +9,22 @@ export interface SelectorContext {
     querySelectorAll(selector: string): NodeListOf<HTMLElement> | HTMLElement[];
 }
 
-export interface ValueAccessorCommonArgs {
-    target: Target;
-    property: string;
-    type: TweenType;
-}
-
-export interface SetValueArg extends ValueAccessorCommonArgs {
-    value: string;
-}
-export type GetValue = (arg: ValueAccessorCommonArgs) => 'string';
-export type SetValue = (arg: SetValueArg) => void;
-
 type StyleNumber = number | string | (number | string)[];
 
 export interface Instructions {
     (a: Anim): void | Promise<any>;
 }
 
+export type GetValue = (property: string, target: Target, type: TweenType) => 'string';
+export type SetValue = (property: string, target: Target, type: TweenType, value: string) => void;
+
+export type InitProperties = (properties: Object, target: Target) => void;
+export type ApplyProperties = InitProperties;
+
 export interface ControlParams {
     target?: Selector;
-    getValue?: GetValue;
-    setValue?: SetValue;
+    initProperties?: InitProperties;
+    applyProperties?: ApplyProperties;
     easing?: (elapsed: number, elasticity: number) => number;    // e.g. easeInOutQuad
     duration?: number;              // e.g. 1000
     delay?: number;                 // e.g. 1000 -> delay before execution

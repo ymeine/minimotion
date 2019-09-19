@@ -314,7 +314,7 @@ describe("animate", () => {
         ], "logs");
     });
     
-    it("should support custom setValue", async function () {
+    it("should support applyProperties", async function () {
         const player = new TestPlayer([], animate);
 
         const actualProperties = {
@@ -324,7 +324,11 @@ describe("animate", () => {
 
         function animate(a) {
             a.animate({
-                setValue: ({property, value}) => actualProperties[property].push(value),
+                applyProperties: (properties) => {
+                    for (const [property, value] of Object.entries(properties)) {
+                        actualProperties[property].push(value);
+                    }
+                },
                 duration: 32,
                 easing: linear,
 
@@ -344,7 +348,7 @@ describe("animate", () => {
         });
     });
 
-    it("should support custom setValue with no from but custom getValue", async function () {
+    it("should support applyProperties with no 'from' but an initProperties instead", async function () {
         const player = new TestPlayer([], animate);
 
         const actualProperties = {
@@ -352,15 +356,17 @@ describe("animate", () => {
             color: [],
         };
 
-        const initialValues = {
-            length: 0,
-            color: '#000000',
-        }
-
         function animate(a) {
             a.animate({
-                getValue: ({property}) => initialValues[property],
-                setValue: ({property, value}) => actualProperties[property].push(value),
+                initProperties: (properties) => {
+                    properties.length = 0;
+                    properties.color = '#000000';
+                },
+                applyProperties: (properties) => {
+                    for (const [property, value] of Object.entries(properties)) {
+                        actualProperties[property].push(value);
+                    }
+                },
                 duration: 32,
                 easing: linear,
 
@@ -380,15 +386,15 @@ describe("animate", () => {
         });
     });
 
-    it("should receive target with custom getValue / setValue", async function () {
+    it("should receive target inside initProperties and applyProperties", async function () {
         const target = new TestElement('x');
         const player = new TestPlayer([target], animate);
 
         function animate(a) {
             a.animate({
                 target: '#x',
-                getValue: ({target}) => (assert.strictEqual(target, target), 0),
-                setValue: ({target}) => assert.strictEqual(target, target),
+                initProperties: (properties, target) => assert.strictEqual(target, target),
+                applyProperties: (properties, target) => assert.strictEqual(target, target),
                 duration: 32,
                 dummy: 100,
             });
@@ -397,23 +403,18 @@ describe("animate", () => {
         await player.play();
     });
 
-    it("should support custom getValue with default setValue and a target", async function () {
+    it("should support initProperties with no applyProperties in condition a target is given", async function () {
         const player = new TestPlayer([new TestElement('x')], animate);
-
-        const initialValues = {
-            offset: 0,
-            color: '#000000',
-        }
-
-        const remapping = {
-            top: 'offset',
-            left: 'offset',
-        };
 
         function animate(a) {
             a.animate({
                 target: '#x',
-                getValue: ({property}) => initialValues[remapping[property] || property],
+                initProperties: (properties) => {
+                    const offset = 0;
+                    properties.top = offset;
+                    properties.left = offset;
+                    properties.color = '#000000';
+                },
                 duration: 32,
                 easing: linear,
 
@@ -436,6 +437,38 @@ describe("animate", () => {
             "2: #x.left = 100px;",
             "2: #x.color = rgba(255, 255, 255, 1);",
         ], "logs");
+    });
+
+    it("should support applyProperties with a delay", async function () {
+        const player = new TestPlayer([], animate);
+
+        let currentTick: number | null = null;
+        const propertiesSnapshots: any[] = [];
+
+        function animate(a) {
+            a.animate({
+                applyProperties: (properties) => {
+                    propertiesSnapshots.push({tick: currentTick, properties: Object.assign({}, properties)})
+                },
+                delay: 17,
+                duration: 48,
+                easing: linear,
+
+                length: [0, 100],
+                color: ['#000000', '#FFFFFF'],
+            });
+        }
+
+        await player.play({
+            onupdate: (time) => {
+                currentTick = time / 16;
+            },
+        });
+        assert.deepEqual(propertiesSnapshots, [
+            {tick: 1, properties: {length: '0', color: 'rgba(0, 0, 0, 1)'}},
+            {tick: 2, properties: {length: '50', color: 'rgba(128, 128, 128, 1)'}},
+            {tick: 3, properties: {length: '100', color: 'rgba(255, 255, 255, 1)'}},
+        ]);
     });
 
     // transform prop

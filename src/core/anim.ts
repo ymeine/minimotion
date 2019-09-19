@@ -14,11 +14,9 @@ import {
     PlayArguments,
     PlayParams,
     Target,
-    GetValue,
-    SetValue,
 } from './types';
 import { easeOutElastic } from './easings';
-import { log, parseValue, dom } from './utils';
+import { log, parseValue } from './utils';
 import { Delay, PlayerEntity, createTweens } from './entities';
 
 const FRAME_MS = 16, MAX_TIME = Number.MAX_SAFE_INTEGER, MAX_ASYNC = 100, MAX_TL_DURATION_MS = 600000; // 10mn
@@ -39,8 +37,8 @@ const defaultSettings: ControlParams = {
     release: 0,
     elasticity: .5,
     speed: 1,
-    getValue: dom.getValue,
-    setValue: dom.setValue,
+    initProperties: undefined,
+    applyProperties: undefined,
 }
 
 export async function exhaustAsyncPipe() {
@@ -588,8 +586,8 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
         // read all control args
         const d = this.settings,
             target = parseValue("target", params, d) as Selector,
-            getValue = parseValue("getValue", params, d) as GetValue,
-            setValue = parseValue("setValue", params, d) as SetValue,
+            initProperties = parseValue("initProperties", params, d),
+            applyProperties = parseValue("applyProperties", params, d),
             easing = parseValue("easing", params, d) as Function,
             speed = parseValue("speed", params, d) as number,
             duration = convertDuration(parseValue("duration", params, d), speed), // convertDuration
@@ -598,12 +596,12 @@ export class TimeLine implements Anim, AnimEntity, AnimTimeLine, AnimContainer {
             elasticity = parseValue("elasticity", params, d) as number;
 
         const finalTarget = this.select(target);
-        if (finalTarget == null && params.setValue == null) {
+        if (finalTarget == null && params.applyProperties == null) {
             return console.log('[anim] invalid target selector: ' + target);
         }
     
         // identify properties/attributes to animate and create a tween for each of them
-        const tween = createTweens(finalTarget, getValue, setValue, params, d, this, duration, easing, elasticity, delay, release);
+        const tween = createTweens(finalTarget, initProperties, applyProperties, params, d, this, duration, easing, elasticity, delay, release);
         if (tween) {
             // return a promise associated to the last tween
             return new Promise((resolve) => {

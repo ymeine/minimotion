@@ -3,39 +3,33 @@
   import { easeInOutCubic } from "../../core/easings";
 
   async function animation(a) {
-	const model = {
-		translate1: '0',
-		rotation: '0',
-		translate2: '0',
-		color: null,
-		alphabetIndex: 1,
-	};
-
-	a.animate({
+	  a.animate({
 		target: '.square',
 		
-		getValue: ({property, target}) => {
-			if (property === 'color') {
-				return window.getComputedStyle(target)['background-color'];
-			}
-			return model[property];
+		initProperties: (properties, target) => {
+			properties.translate1 = '0';
+			properties.rotation = '0';
+			properties.translate2 = '0';
+			properties.color = window.getComputedStyle(target)['background-color'];
+			properties.alphabetIndex = 1;
 		},
-		setValue: ({target, property, value}) => {
-			model[property] = value;
 
-			const {translate1, rotation, translate2, color} = model;
+		applyProperties: (properties, target) => {
+			const {translate1, rotation, translate2, color} = properties;
 			target.style['background-color'] = color;
 			target.style.transform = [
 				`translateX(${translate1}px)`,
 				`rotate(${rotation}deg)`,
 				`translateX(${translate2}px)`,
 			].join(' ');
-			alphabetIndex = model.alphabetIndex;
+			// sets template-bound variable (don't get confused by the similar name)
+			alphabetIndex = properties.alphabetIndex;
 
 			target.firstElementChild.style.transform = `rotate(-${rotation}deg)`;
 		},
 
 		delay: 200,
+		release: 200,
 		duration: 1000,
 		easing: easeInOutCubic,
 

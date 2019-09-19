@@ -57,7 +57,7 @@ export const dom = {
     /**
      * Return the current value of a targeted property
      */
-    getValue({target, property, type}) {
+    getValue(property, target, type) {
         switch (type) {
             case 'css': return dom.getCSSValue(target, property);
             case 'transform': return getTransformValue(target, property);
@@ -65,7 +65,7 @@ export const dom = {
         }
     },
 
-    setValue({target, property, type, value}) {
+    setValue(property, target, type, value) {
         if (!target) return;
         switch (type) {
             case 'css':
