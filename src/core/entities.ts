@@ -134,7 +134,7 @@ export function createTweens(
         target,
         // properties specifications
         Object.keys(params)
-            .filter(property => !settings.hasOwnProperty(property) && property !== 'target')
+            .filter(property => !Object.prototype.hasOwnProperty.call(settings, property) && property !== 'target')
             .reduce((output, property) => (output[property] = params[property], output), {}),
         initProperties, applyProperties,
         duration,
@@ -224,7 +224,7 @@ export class TweenGroup extends TimelineEntity {
             });
 
             applyProperties(properties, this.target);
-        };
+        }
 
         this.checkDoneAndRelease(time, forward);
     }

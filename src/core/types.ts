@@ -17,7 +17,7 @@ export interface Instructions {
 
 export type GetValue = (property: string, target: Target, type: TweenType) => 'string';
 
-export type InitProperties = (properties: Object, target: Target) => void;
+export type InitProperties = (properties: Record<string, any>, target: Target) => void;
 export type ApplyProperties = InitProperties;
 
 export interface ControlParams {
