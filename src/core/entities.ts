@@ -131,46 +131,30 @@ export function createTweens(
     delay: number,
     release: number
 ) {
-    const animatedProperties = Object.keys(params)
-        .filter(property => !settings.hasOwnProperty(property) && property !== 'target');
+    const propertiesSpecs = Object.keys(params)
+        .filter(property => !settings.hasOwnProperty(property) && property !== 'target')
+        .reduce((output, property) => (output[property] = params[property], output), {});
 
-    if (applyProperties != null || initProperties != null) {
-        const propertiesSpecs = {};
-        for (const property of animatedProperties) {
-            propertiesSpecs[property] = params[property];
-        }
-
-        const tween = new TweenGroup(
-            target,
-            propertiesSpecs,
-            initProperties,
-            applyProperties,
-            duration,
-            easing,
-            elasticity,
-            delay,
-            release,
-        );
-        tween.attach(parent);
-        return tween;
-    } else {
-        let tween: Tween | null = null;
-        for (const p of animatedProperties) {
-            // TODO share init results across all tweens of a same family
-            const twn = new Tween(target, dom.getValue, dom.setValue, p, params[p], duration, easing, elasticity, delay, release);
-            if (twn.isValid) {
-                tween = twn;
-                tween.attach(parent);
-            }
-        }
-        return tween;
-    }
+    const tween = new TweenGroup(
+        target,
+        propertiesSpecs,
+        initProperties,
+        applyProperties,
+        duration,
+        easing,
+        elasticity,
+        delay,
+        release,
+    );
+    tween.attach(parent);
+    return tween;
 }
 
 export class TweenGroup extends TimelineEntity {
     isValid = true;
     private tweens: Tween[];
     private properties: Object = {};
+    private propertiesSet = {};
 
     constructor(
         private target: ResolvedTarget,
@@ -204,15 +188,20 @@ export class TweenGroup extends TimelineEntity {
             };
         } else {
             const propertiesTypes = {};
+            // maybe reset that everytime a display frame ended instead?
+            // dunno if all values get updated all the time
 
             setValue = (property, target, type, value) => {
+                this.propertiesSet[property] = true;
                 this.properties[property] = value;
                 propertiesTypes[property] = type;
             };
 
             this.applyProperties = (properties, target) => {
                 for (const [property, value] of Object.entries(properties)) {
-                    dom.setValue(property, target, propertiesTypes[property], value);
+                    if (this.propertiesSet[property]) {
+                        dom.setValue(property, target, propertiesTypes[property], value);
+                    }
                 }
             };
         }
@@ -242,6 +231,7 @@ export class TweenGroup extends TimelineEntity {
             (this.applyProperties)(this.properties, this.target);
             this.checkDoneAndRelease(time, forward);
         }
+        this.propertiesSet = {};
     }
 }
 
@@ -309,21 +299,19 @@ export class Tween extends TimelineEntity {
 
     displayFrame(time: number, targetTime: number, forward: boolean) {
         log(this.name, ": display frame", time, targetTime, forward)
-        if (this.delayTime <= time && time <= this.endTime) {
-            // if (!this.skipRendering) {
-                const targetFrame = time === targetTime;
-                if ((targetFrame && this.delayTime <= time && time <= this.doneTime)) {
-                    this.setProgression(time - this.delayTime);
-                } else if (!targetFrame) {
-                    if (forward && targetTime >= this.doneTime && time === this.doneTime) {
-                        this.setProgression(time - this.delayTime);
-                    } else if (!forward && targetTime <= this.delayTime && time === this.delayTime) {
-                        this.setProgression(0);
-                    }
-                }
-            // }
-            this.checkDoneAndRelease(time, forward);
+        
+        const targetFrame = time === targetTime;
+        if ((targetFrame && this.delayTime <= time && time <= this.doneTime)) {
+            this.setProgression(time - this.delayTime);
+        } else if (!targetFrame) {
+            if (forward && targetTime >= this.doneTime && time === this.doneTime) {
+                this.setProgression(time - this.delayTime);
+            } else if (!forward && targetTime <= this.delayTime && time === this.delayTime) {
+                this.setProgression(0);
+            }
         }
+        
+        this.checkDoneAndRelease(time, forward);
     }
 
     setProgression(elapsed: number) {
